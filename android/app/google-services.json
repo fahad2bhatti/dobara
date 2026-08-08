@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "635736355222",
+    "project_id": "dobara-ca7ca",
+    "storage_bucket": "dobara-ca7ca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:635736355222:android:4a0ff3356966cd3a4fadb7",
+        "android_client_info": {
+          "package_name": "com.fahadbhatti.dobara"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPal7DxHirA6mvvzX0eICLN_7LzWegbck"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
