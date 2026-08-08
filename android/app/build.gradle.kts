@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.fahadbhatti.dobara"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

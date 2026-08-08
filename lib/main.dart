@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'core/theme/app_theme.dart';
+import 'features/home/presentation/screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,10 +19,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Dobara',
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Dobara')),
-        body: const Center(child: Text('Firebase Connected!')),
-      ),
+      theme: AppTheme.light,
+      home: const HomeScreen(),
     );
   }
 }
