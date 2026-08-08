@@ -9,7 +9,7 @@
 - Core deps installed: flutter_riverpod, riverpod_annotation, go_router, firebase_core, firebase_auth, cloud_firestore, firebase_storage, firebase_messaging, cached_network_image, hive_flutter, flutter_secure_storage
 - Dev deps installed: build_runner, riverpod_generator, mocktail
 
-## 🔄 In Progress
+## ✅ Done
 - Firebase project connect (`flutterfire configure`) — pending: confirm Firebase Console project exists or needs creating
 - `core/`, `features/`, `shared/` folder structure (Doc 6)
 - Doc 5 design tokens → `AppTheme`
