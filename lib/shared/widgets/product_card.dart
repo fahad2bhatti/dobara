@@ -55,9 +55,9 @@ class _ProductCardState extends State<ProductCard> {
                     child: CachedNetworkImage(
                       imageUrl: p.imageUrl,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) =>
+                      placeholder: (_, _) =>
                           Container(color: AppColors.muted),
-                      errorWidget: (_, __, ___) => Container(
+                      errorWidget: (_, _, _) => Container(
                         color: AppColors.muted,
                         child: const Icon(Icons.image_not_supported_outlined,
                             color: AppColors.textTertiary),
