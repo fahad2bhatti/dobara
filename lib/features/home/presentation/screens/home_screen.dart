@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
 import '../../data/mock_products.dart';
+import '../../../listings/presentation/screens/listing_detail_screen.dart';
 
 const List<String> _kCategories = [
   'All',
@@ -37,8 +38,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openProduct(Product p) {
-    // TODO: navigate to Listing Detail screen once it's built
-    // (go_router route: /listing/:id)
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ListingDetailScreen(product: p)),
+    );
   }
 
   @override
@@ -315,10 +317,10 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.62,
+          childAspectRatio: 0.58,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, i) => ProductCard(
+              (context, i) => ProductCard(
             product: items[i],
             onTap: () => _openProduct(items[i]),
           ),
