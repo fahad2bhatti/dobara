@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../orders/presentation/screens/order_history_screen.dart';
 import '../../../admin/presentation/screens/admin_dashboard_screen.dart';
+import '../../../auth/domain/auth_provider.dart';
+import '../../../auth/presentation/screens/login_screen.dart';
 
 const List<List<String>> _kMenuItems = [
   ['📦', 'My Orders'],
@@ -17,11 +20,14 @@ const List<List<String>> _kMenuItems = [
 /// Buyer's own profile — stats card, "Become a Seller" upsell, menu.
 /// Currently shows a "Guest User" placeholder; will read real user
 /// data once Auth (Phase 10) is wired up.
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    final isSignedIn = user != null;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -71,22 +77,24 @@ class ProfileScreen extends StatelessWidget {
                               size: 24, color: AppColors.textSecondary),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Guest User',
-                                style: TextStyle(
+                                isSignedIn
+                                    ? (user.displayName ?? user.email ?? 'Dobara User')
+                                    : 'Guest User',
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                'Lahore, Pakistan',
-                                style: TextStyle(
+                                isSignedIn ? (user.email ?? '') : 'Lahore, Pakistan',
+                                style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.textTertiary,
                                 ),
@@ -95,7 +103,12 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         ),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: isSignedIn
+                              ? () {}
+                              : () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const LoginScreen()),
+                          ),
                           style: TextButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.primaryForeground,
@@ -105,9 +118,9 @@ class ProfileScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(999),
                             ),
                           ),
-                          child: const Text(
-                            'Edit',
-                            style: TextStyle(
+                          child: Text(
+                            isSignedIn ? 'Edit' : 'Sign In',
+                            style: const TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -218,6 +231,15 @@ class ProfileScreen extends StatelessWidget {
                               builder: (_) => const AdminDashboardScreen(),
                             ),
                           );
+                        } else if (item[1] == 'Sign Out') {
+                          if (isSignedIn) {
+                            ref.read(firebaseAuthServiceProvider).signOut();
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const LoginScreen()),
+                            );
+                          }
                         }
                       },
                       child: Container(
@@ -241,7 +263,9 @@ class ProfileScreen extends StatelessWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                item[1],
+                                item[1] == 'Sign Out' && !isSignedIn
+                                    ? 'Sign In'
+                                    : item[1],
                                 style: const TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textPrimary,
