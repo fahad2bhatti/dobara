@@ -26,7 +26,7 @@
 - [x] *Phase 6 — Checkout**: address, COD payment, order summary
 - [x] **Phase 7 — Orders**: history + status tracking
 - [x] **Phase 8 — Trust & Safety**: report listing / report seller
-- [ ] **Phase 9 — Admin**: dashboard, moderation, user management
+- [x] **Phase 9 — Admin**: dashboard, moderation, user management
 - [ ] **Phase 10 — Auth**: sign up, login, Firebase Auth service, route guards
 
 ## 📋 Not Started (beyond feature phases above)
