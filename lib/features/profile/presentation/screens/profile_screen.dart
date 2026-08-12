@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../orders/presentation/screens/order_history_screen.dart';
 
 const List<List<String>> _kMenuItems = [
   ['📦', 'My Orders'],
@@ -202,7 +203,15 @@ class ProfileScreen extends StatelessWidget {
                     final item = _kMenuItems[i];
                     final isLast = i == _kMenuItems.length - 1;
                     return InkWell(
-                      onTap: () {},
+                      onTap: () {
+                        if (item[1] == 'My Orders') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const OrderHistoryScreen(),
+                            ),
+                          );
+                        }
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 13),

@@ -13,12 +13,14 @@ enum ConditionGrade {
 }
 
 class Seller {
+  final String id;
   final String name;
   final double? trustScore; // null = New Seller
   final int completedSales;
   final String avatarUrl;
 
   const Seller({
+    required this.id,
     required this.name,
     required this.trustScore,
     required this.completedSales,

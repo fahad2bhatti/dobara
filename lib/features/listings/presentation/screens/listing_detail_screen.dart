@@ -7,6 +7,9 @@ import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
 import '../../../cart/domain/cart_provider.dart';
 import '../../../cart/presentation/screens/cart_screen.dart';
+import 'package:dobara/features/reports/presentation/widgets/report_sheet.dart';
+import 'package:dobara/features/reports/domain/report_reason.dart';
+import '../../../../core/constants/dev_config.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -243,16 +246,14 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                 CircleAvatar(
                                   radius: 21,
                                   backgroundColor: AppColors.neutral200,
-                                  backgroundImage:
-                                  CachedNetworkImageProvider(
+                                  backgroundImage: CachedNetworkImageProvider(
                                     p.seller.avatarUrl,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         p.seller.name,
@@ -264,7 +265,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        '${p.seller.completedSales} completed sales · ${p.city}',
+                                        '${p.seller.completedSales} completed sales • ${p.city}',
                                         style: const TextStyle(
                                           fontSize: 11,
                                           color: AppColors.textTertiary,
@@ -274,6 +275,22 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                   ),
                                 ),
                                 TrustScore(score: p.seller.trustScore),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.flag_outlined,
+                                    size: 16,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  onPressed: () => showReportSheet(
+                                    context,
+                                    targetType: ReportTargetType.seller,
+                                    targetId: p.seller.id,
+                                    reportedByUserId: currentUserId,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -328,7 +345,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                           const SizedBox(height: 16),
 
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () => showReportSheet(
+                              context,
+                              targetType: ReportTargetType.listing,
+                              targetId: p.id,
+                              reportedByUserId: currentUserId, // apna dev constant yahan
+                            ),
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               minimumSize: Size.zero,

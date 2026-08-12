@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../shared/models/order_model.dart';
 import '../../../cart/domain/cart_provider.dart';
+import '../../../orders/domain/orders_provider.dart';
 
 const int _kDeliveryFee = 200;
 
@@ -36,8 +38,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _placeOrder() {
     if (!_canPlaceOrder) return;
-    // TODO Phase 11 (post-auth Firestore pass): write order doc,
-    // tied to real user id, then clear cart.
+
+    final items = ref.read(cartProvider);
+    final subtotal = ref.read(cartSubtotalProvider);
+    final order = Order(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      items: items,
+      subtotal: subtotal,
+      deliveryFee: _kDeliveryFee,
+      total: subtotal + _kDeliveryFee,
+      customerName: _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      address: _addressController.text.trim(),
+      city: _cityController.text.trim(),
+      status: OrderStatus.placed,
+      placedAt: DateTime.now(),
+    );
+
+    // TODO Phase 11 (post-auth Firestore pass): write this order doc
+    // to Firestore under orders/{orderId}, tied to the real user id.
+    ref.read(ordersProvider.notifier).addOrder(order);
     ref.read(cartProvider.notifier).clear();
     setState(() => _placed = true);
   }
