@@ -19,13 +19,13 @@
 
 ## 🗺️ Roadmap (auth intentionally last)
 - [x] **Phase 1 — Navigation** (go_router + bottom nav)
-- [ ] **Phase 2 — Listings**: Listing Detail screen, Explore/Search + filters
-- [ ] **Phase 3 — Create Listing (Sell flow)**: guided multi-step (photos → category → condition → info → price → description → preview → publish)
-- [ ] **Phase 4 — Seller Profile**: trust score, active listings, reviews
-- [ ] **Phase 5 — Cart**
-- [ ] **Phase 6 — Checkout**: address, COD payment, order summary
-- [ ] **Phase 7 — Orders**: history + status tracking
-- [ ] **Phase 8 — Trust & Safety**: report listing / report seller
+- [x] **Phase 2 — Listings**: Listing Detail screen, Explore/Search + filters
+- [x] **Phase 3 — Create Listing (Sell flow)**: guided multi-step (photos → category → condition → info → price → description → preview → publish)
+- [x] **Phase 4 — Seller Profile**: trust score, active listings, reviews
+- [x] **Phase 5 — Cart**
+- [x] *Phase 6 — Checkout**: address, COD payment, order summary
+- [x] **Phase 7 — Orders**: history + status tracking
+- [x] **Phase 8 — Trust & Safety**: report listing / report seller
 - [ ] **Phase 9 — Admin**: dashboard, moderation, user management
 - [ ] **Phase 10 — Auth**: sign up, login, Firebase Auth service, route guards
 
