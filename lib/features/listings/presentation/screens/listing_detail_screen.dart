@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
+import '../../../cart/domain/cart_provider.dart';
+import '../../../cart/presentation/screens/cart_screen.dart';
 
-class ListingDetailScreen extends StatefulWidget {
+class ListingDetailScreen extends ConsumerStatefulWidget {
   final Product product;
 
   const ListingDetailScreen({super.key, required this.product});
 
   @override
-  State<ListingDetailScreen> createState() => _ListingDetailScreenState();
+  ConsumerState<ListingDetailScreen> createState() =>
+      _ListingDetailScreenState();
 }
 
-class _ListingDetailScreenState extends State<ListingDetailScreen> {
+class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
   bool _wish = false;
   int _imgIdx = 0;
 
@@ -128,7 +132,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                                   padding: const EdgeInsets.only(right: 12),
                                   child: Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '${p.brand}${p.size != null ? ' · ${p.size}' : ''} · ${p.category}',
@@ -240,7 +244,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                                   radius: 21,
                                   backgroundColor: AppColors.neutral200,
                                   backgroundImage:
-                                      CachedNetworkImageProvider(
+                                  CachedNetworkImageProvider(
                                     p.seller.avatarUrl,
                                   ),
                                 ),
@@ -248,7 +252,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         p.seller.name,
@@ -303,22 +307,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             children: [p.category, p.brand, p.city]
                                 .map(
                                   (tag) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.muted,
-                                      borderRadius:
-                                          BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      tag,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.muted,
+                                  borderRadius:
+                                  BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  tag,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
                                   ),
-                                )
+                                ),
+                              ),
+                            )
                                 .toList(),
                           ),
                           const SizedBox(height: 16),
@@ -381,22 +385,52 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.muted,
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 14, horizontal: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Add to Cart',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
+              Consumer(
+                builder: (context, ref, _) {
+                  final inCart =
+                  ref.watch(cartProvider.notifier).contains(p.id);
+                  return ElevatedButton(
+                    onPressed: inCart
+                        ? null
+                        : () {
+                      ref.read(cartProvider.notifier).add(p);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${p.name} added to cart'),
+                          duration: const Duration(seconds: 2),
+                          action: SnackBarAction(
+                            label: 'View Cart',
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const CartScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.muted,
+                      disabledBackgroundColor: AppColors.muted,
+                      foregroundColor: AppColors.primary,
+                      disabledForegroundColor:
+                      AppColors.primary.withValues(alpha: 0.4),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      inCart ? 'In Cart' : 'Add to Cart',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  );
+                },
               ),
             ],
           ),

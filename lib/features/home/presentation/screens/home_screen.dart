@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
+import '../../../cart/domain/cart_provider.dart';
+import '../../../cart/presentation/screens/cart_screen.dart';
 import '../../data/mock_products.dart';
 import '../../../listings/presentation/screens/listing_detail_screen.dart';
 
@@ -16,14 +19,14 @@ const List<String> _kCategories = [
   'Vintage',
 ];
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _selectedCategory = 'All';
 
   List<Product> get _filtered {
@@ -98,7 +101,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _circleIconButton(Icons.notifications_outlined),
                   const SizedBox(width: 8),
-                  _circleIconButton(Icons.shopping_bag_outlined, badgeCount: 2),
+                  Builder(builder: (context) {
+                    final count = ref.watch(cartCountProvider);
+                    return GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CartScreen()),
+                      ),
+                      child: _circleIconButton(
+                        Icons.shopping_bag_outlined,
+                        badgeCount: count > 0 ? count : null,
+                      ),
+                    );
+                  }),
                 ],
               ),
             ],
@@ -175,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         itemCount: _kCategories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final c = _kCategories[i];
           final selected = c == _selectedCategory;
