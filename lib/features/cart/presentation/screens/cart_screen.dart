@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../domain/cart_provider.dart';
+import '../../../checkout/presentation/screens/checkout_screen.dart';
 
 const int _kDeliveryFee = 200; // flat MVP delivery fee, Rs.
 
@@ -70,7 +71,7 @@ class CartScreen extends ConsumerWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
         final p = items[i];
         return Container(
@@ -97,7 +98,7 @@ class CartScreen extends ConsumerWidget {
                   child: CachedNetworkImage(
                     imageUrl: p.imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: AppColors.muted),
+                    placeholder: (_, _) => Container(color: AppColors.muted),
                   ),
                 ),
               ),
@@ -176,7 +177,9 @@ class CartScreen extends ConsumerWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO Phase 6: navigate to CheckoutScreen
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
