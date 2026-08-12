@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../orders/presentation/screens/order_history_screen.dart';
+import '../../../admin/presentation/screens/admin_dashboard_screen.dart';
 
 const List<List<String>> _kMenuItems = [
   ['📦', 'My Orders'],
@@ -9,6 +10,7 @@ const List<List<String>> _kMenuItems = [
   ['⭐', 'Reviews'],
   ['🔔', 'Notifications'],
   ['⚙️', 'Settings'],
+  ['🛠️', 'Admin Panel'], // TEMP: visible to everyone until Phase 10 role check
   ['🚪', 'Sign Out'],
 ];
 
@@ -208,6 +210,12 @@ class ProfileScreen extends StatelessWidget {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const OrderHistoryScreen(),
+                            ),
+                          );
+                        } else if (item[1] == 'Admin Panel') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AdminDashboardScreen(),
                             ),
                           );
                         }
