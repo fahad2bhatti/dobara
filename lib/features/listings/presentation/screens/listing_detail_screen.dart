@@ -26,10 +26,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
 
   List<String> get _images {
     final p = widget.product;
-    final second = p.category == 'Shoes'
-        ? 'https://images.unsplash.com/photo-1608319318013-290bac041539?w=400&h=520&fit=crop&auto=format'
-        : 'https://images.unsplash.com/photo-1479064555552-3ef4979f8908?w=400&h=520&fit=crop&auto=format';
-    return [p.imageUrl, second];
+    return p.imageUrls.isNotEmpty
+        ? p.imageUrls
+        : ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=520&fit=crop&auto=format'];
   }
 
   @override

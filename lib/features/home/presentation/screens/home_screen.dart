@@ -5,7 +5,7 @@ import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
 import '../../../cart/domain/cart_provider.dart';
 import '../../../cart/presentation/screens/cart_screen.dart';
-import '../../data/mock_products.dart';
+import '../../../listings/domain/listings_provider.dart';
 import '../../../listings/presentation/screens/listing_detail_screen.dart';
 
 const List<String> _kCategories = [
@@ -29,15 +29,15 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _selectedCategory = 'All';
 
-  List<Product> get _filtered {
-    if (_selectedCategory == 'All') return mockProducts;
+  List<Product> _filter(List<Product> all) {
+    if (_selectedCategory == 'All') return all;
     if (_selectedCategory == 'Shoes' || _selectedCategory == 'Bags') {
-      return mockProducts.where((p) => p.category == _selectedCategory).toList();
+      return all.where((p) => p.category == _selectedCategory).toList();
     }
     if (['Men', 'Women', 'Streetwear', 'Vintage'].contains(_selectedCategory)) {
-      return mockProducts.where((p) => p.category == 'Clothing').toList();
+      return all.where((p) => p.category == 'Clothing').toList();
     }
-    return mockProducts.where((p) => p.category == _selectedCategory).toList();
+    return all.where((p) => p.category == _selectedCategory).toList();
   }
 
   void _openProduct(Product p) {
@@ -48,6 +48,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final listingsAsync = ref.watch(listingsStreamProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -57,7 +59,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             SliverToBoxAdapter(child: _buildCategories()),
             SliverToBoxAdapter(child: _buildHeroBanner()),
             SliverToBoxAdapter(child: _buildSectionTitle()),
-            _buildProductGrid(),
+            listingsAsync.when(
+              data: (all) => _buildProductGrid(_filter(all)),
+              loading: () => const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                        color: AppColors.primary, strokeWidth: 2),
+                  ),
+                ),
+              ),
+              error: (err, _) => SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                  child: Center(
+                    child: Text(
+                      'Could not load listings. Check your connection.',
+                      style: const TextStyle(
+                          color: AppColors.textTertiary, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
           ],
         ),
@@ -189,7 +214,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         itemCount: _kCategories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final c = _kCategories[i];
           final selected = c == _selectedCategory;
@@ -309,8 +334,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildProductGrid() {
-    final items = _filtered;
+  Widget _buildProductGrid(List<Product> items) {
     if (items.isEmpty) {
       return const SliverToBoxAdapter(
         child: Padding(

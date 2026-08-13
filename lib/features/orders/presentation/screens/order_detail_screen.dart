@@ -134,7 +134,7 @@ class OrderDetailScreen extends StatelessWidget {
                         child: CachedNetworkImage(
                           imageUrl: p.imageUrl,
                           fit: BoxFit.cover,
-                          placeholder: (_, __) =>
+                          placeholder: (_, _) =>
                               Container(color: AppColors.muted),
                         ),
                       ),

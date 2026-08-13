@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Thin wrapper around FirebaseAuth — the single place the rest of
 /// the app talks to for sign up / sign in / sign out. Keeps
 /// FirebaseAuth calls out of widgets.
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
@@ -18,8 +20,25 @@ class FirebaseAuthService {
       email: email,
       password: password,
     );
-    await credential.user?.updateDisplayName(name);
-    await credential.user?.reload();
+    final user = credential.user;
+    await user?.updateDisplayName(name);
+    await user?.reload();
+
+    // Create the matching Firestore profile — this is what listings,
+    // seller trust score, and admin role checks read from.
+    if (user != null) {
+      await _db.collection('users').doc(user.uid).set({
+        'name': name,
+        'email': email,
+        'role': 'buyer',
+        'trustScore': null,
+        'completedSales': 0,
+        'avatarUrl': '',
+        'city': 'Lahore',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
     return _auth.currentUser;
   }
 

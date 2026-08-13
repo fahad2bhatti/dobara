@@ -1,8 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
+import '../../../auth/domain/auth_provider.dart';
+import '../../../auth/presentation/screens/login_screen.dart';
+import '../../domain/listings_provider.dart';
 
 const List<String> _kSellCategories = ['Clothing', 'Shoes', 'Bags', 'Accessories'];
 const List<String> _kStepTitles = [
@@ -30,17 +36,20 @@ class _SellForm {
 /// Guided, multi-step sell flow — matches Doc 5 spec:
 /// Photos → Category → Condition → Details → Price → Description
 /// → Preview → Publish. Condition is picker-only, never free text.
-class CreateListingScreen extends StatefulWidget {
+class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
 
   @override
-  State<CreateListingScreen> createState() => _CreateListingScreenState();
+  ConsumerState<CreateListingScreen> createState() =>
+      _CreateListingScreenState();
 }
 
-class _CreateListingScreenState extends State<CreateListingScreen> {
+class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   int _step = 1;
   bool _published = false;
+  bool _publishing = false;
   final _form = _SellForm();
+  final List<Uint8List> _pickedImages = [];
 
   final _brandController = TextEditingController();
   final _sizeController = TextEditingController();
@@ -68,12 +77,94 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     return true;
   }
 
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 1600,
+    );
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      setState(() => _pickedImages.add(bytes));
+    }
+  }
+
+  // TEMP: while Storage billing is unresolved, publish with a category
+  // placeholder instead of the picked photos. Remove once Storage works.
+  String _placeholderImage(String category) {
+    switch (category) {
+      case 'Shoes':
+        return 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&h=520&fit=crop&auto=format';
+      case 'Bags':
+        return 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=520&fit=crop&auto=format';
+      case 'Accessories':
+        return 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=520&fit=crop&auto=format';
+      default:
+        return 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=520&fit=crop&auto=format';
+    }
+  }
+
+  Future<void> _publishListing() async {
+    var user = ref.read(currentUserProvider);
+    if (user == null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      user = ref.read(currentUserProvider);
+      if (user == null) return; // still not signed in — user backed out
+    }
+
+    setState(() => _publishing = true);
+
+    // Prefer the Firestore profile (has real trust score / sales count);
+    // fall back to bare Auth user info if the profile hasn't loaded yet.
+    final profile = ref.read(userProfileProvider).asData?.value;
+    final seller = Seller(
+      id: user.uid,
+      name: profile?.name ?? user.displayName ?? user.email ?? 'Dobara Seller',
+      trustScore: profile?.trustScore,
+      completedSales: profile?.completedSales ?? 0,
+      avatarUrl: profile?.avatarUrl ?? '',
+    );
+
+    try {
+      await ref.read(listingsRepositoryProvider).publishListing(
+        name: _form.brand.isEmpty
+            ? '${_form.category} Item'
+            : '${_form.brand} ${_form.category}',
+        brand: _form.brand.isEmpty ? 'Unbranded' : _form.brand,
+        price: int.tryParse(_form.price) ?? 0,
+        condition: _form.condition!,
+        category: _form.category,
+        size: _form.size.isEmpty ? null : _form.size,
+        city: profile?.city ?? 'Lahore',
+        description: _form.description,
+        seller: seller,
+        images: const [], // TEMP: Storage billing not resolved yet
+        placeholderImageUrl: _placeholderImage(_form.category),
+      );
+      if (mounted) {
+        setState(() {
+          _publishing = false;
+          _published = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _publishing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not publish listing: $e')),
+        );
+      }
+    }
+  }
+
   void _handleNext() {
     if (!_canNext) return;
     if (_step < _kTotalSteps) {
       setState(() => _step++);
     } else {
-      setState(() => _published = true);
+      _publishListing();
     }
   }
 
@@ -97,6 +188,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       _colorController.clear();
       _priceController.clear();
       _descController.clear();
+      _pickedImages.clear();
     });
   }
 
@@ -239,37 +331,59 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF4EF),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.accent, width: 2, style: BorderStyle.solid),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.camera_alt_outlined,
-                      size: 22, color: AppColors.accent),
-                  SizedBox(height: 4),
-                  Text('Add Photo',
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.accent)),
-                ],
-              ),
-            ),
-            ...List.generate(
-              5,
-                  (_) => Container(
-                decoration: BoxDecoration(
-                  color: AppColors.muted,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.neutral200, width: 1.5),
+            if (_pickedImages.length < 8)
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4EF),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.accent, width: 2),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.camera_alt_outlined,
+                          size: 22, color: AppColors.accent),
+                      SizedBox(height: 4),
+                      Text('Add Photo',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.accent)),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ...List.generate(_pickedImages.length, (i) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(_pickedImages[i], fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    top: 3,
+                    right: 3,
+                    child: GestureDetector(
+                      onTap: () =>
+                          setState(() => _pickedImages.removeAt(i)),
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close,
+                            size: 13, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
           ],
         ),
         const SizedBox(height: 14),
@@ -687,8 +801,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 child: Container(
                   color: AppColors.muted,
                   child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      const Center(
+                      _pickedImages.isNotEmpty
+                          ? Image.memory(_pickedImages.first, fit: BoxFit.cover)
+                          : const Center(
                         child: Icon(Icons.camera_alt_outlined,
                             size: 48, color: AppColors.neutral300),
                       ),
@@ -837,7 +954,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: _canNext ? _handleNext : null,
+          onPressed: (_canNext && !_publishing) ? _handleNext : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.38),
@@ -847,8 +964,16 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 borderRadius: BorderRadius.circular(16)),
             elevation: 0,
           ),
-          child: Text(label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          child: _publishing
+              ? const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white),
+          )
+              : Text(label,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600)),
         ),
       ),
     );

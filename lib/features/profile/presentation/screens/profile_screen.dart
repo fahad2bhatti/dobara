@@ -5,6 +5,7 @@ import '../../../orders/presentation/screens/order_history_screen.dart';
 import '../../../admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../../auth/domain/auth_provider.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
+import '../../../listings/presentation/screens/my_listings_screen.dart';
 
 const List<List<String>> _kMenuItems = [
   ['📦', 'My Orders'],
@@ -223,6 +224,12 @@ class ProfileScreen extends ConsumerWidget {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const OrderHistoryScreen(),
+                            ),
+                          );
+                        } else if (item[1] == 'My Listings') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MyListingsScreen(),
                             ),
                           );
                         } else if (item[1] == 'Admin Panel') {

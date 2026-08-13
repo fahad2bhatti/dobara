@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
-import '../../../home/data/mock_products.dart';
+import '../../domain/listings_provider.dart';
 import 'listing_detail_screen.dart';
 
 const List<String> _kExploreConditions = [
@@ -14,14 +15,14 @@ const List<String> _kExploreConditions = [
   'Well Worn',
 ];
 
-class ExploreScreen extends StatefulWidget {
+class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
 
   @override
-  State<ExploreScreen> createState() => _ExploreScreenState();
+  ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
+class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final _controller = TextEditingController();
   String _query = '';
   String _condition = 'All';
@@ -32,9 +33,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
     super.dispose();
   }
 
-  List<Product> get _results {
+  List<Product> _filterResults(List<Product> all) {
     final q = _query.toLowerCase();
-    return mockProducts.where((p) {
+    return all.where((p) {
       final matchQ = q.isEmpty ||
           p.name.toLowerCase().contains(q) ||
           p.brand.toLowerCase().contains(q) ||
@@ -52,7 +53,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final results = _results;
+    final listingsAsync = ref.watch(listingsStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -166,46 +167,62 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
             // ── Results ─────────────────────────────
             Expanded(
-              child: results.isEmpty
-                  ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.search_off,
-                        size: 40, color: AppColors.textTertiary),
-                    SizedBox(height: 8),
-                    Text(
-                      'No items found',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+              child: listingsAsync.when(
+                data: (all) {
+                  final results = _filterResults(all);
+                  if (results.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.search_off,
+                              size: 40, color: AppColors.textTertiary),
+                          SizedBox(height: 8),
+                          Text(
+                            'No items found',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Try a different search or filter',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
                       ),
+                    );
+                  }
+                  return GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.58,
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Try a different search or filter',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary,
-                      ),
+                    itemCount: results.length,
+                    itemBuilder: (context, i) => ProductCard(
+                      product: results[i],
+                      onTap: () => _openProduct(results[i]),
                     ),
-                  ],
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.primary, strokeWidth: 2),
                 ),
-              )
-                  : GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.58,
-                ),
-                itemCount: results.length,
-                itemBuilder: (context, i) => ProductCard(
-                  product: results[i],
-                  onTap: () => _openProduct(results[i]),
+                error: (err, _) => const Center(
+                  child: Text(
+                    'Could not load listings. Check your connection.',
+                    style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                  ),
                 ),
               ),
             ),
