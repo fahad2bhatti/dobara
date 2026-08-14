@@ -5,7 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
-import '../../../cart/domain/cart_provider.dart';
+import '../../../cart/data/cart_providers.dart';
 import '../../../cart/presentation/screens/cart_screen.dart';
 import '../../../../shared/models/report_model.dart';
 import '../widgets/report_sheet.dart';
@@ -393,13 +393,19 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
               const SizedBox(width: 10),
               Consumer(
                 builder: (context, ref, _) {
+                  // Watch the stream so `inCart` updates live once
+                  // Firestore confirms the write.
+                  ref.watch(cartStreamProvider);
                   final inCart =
-                  ref.watch(cartProvider.notifier).contains(p.id);
+                  ref.read(cartActionsProvider.notifier).contains(p.id);
                   return ElevatedButton(
                     onPressed: inCart
                         ? null
-                        : () {
-                      ref.read(cartProvider.notifier).add(p);
+                        : () async {
+                      await ref
+                          .read(cartActionsProvider.notifier)
+                          .addItem(p);
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('${p.name} added to cart'),

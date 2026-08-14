@@ -1,76 +1,76 @@
-// lib/features/cart/data/cart_providers.dart
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../shared/models/cart_model.dart';
+import '../../../shared/models/product_model.dart';
+import '../../auth/domain/auth_provider.dart';
 import 'cart_repository.dart';
 
-final cartRepositoryProvider = Provider<CartRepository>((ref) {
-  return CartRepository();
-});
+final cartRepositoryProvider = Provider<CartRepository>((ref) => CartRepository());
 
-/// Live cart stream for the currently signed-in user.
-/// Emits an empty list if signed out or cart doc doesn't exist yet.
+/// Live cart items for the signed-in user. Empty list when signed out.
 final cartStreamProvider = StreamProvider<List<CartItem>>((ref) {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return Stream.value(const []);
-  return ref.watch(cartRepositoryProvider).watchCart(uid);
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return Stream.value(const []);
+  return ref.watch(cartRepositoryProvider).watchCart(user.uid);
 });
 
-/// Derived: total item count (sum of quantities) — for the header badge.
+/// Total item count (sum of quantities) — drives the header badge.
 final cartCountProvider = Provider<int>((ref) {
-  final cart = ref.watch(cartStreamProvider).valueOrNull ?? [];
-  return cart.fold<int>(0, (sum, item) => sum + item.quantity);
+  final items = ref.watch(cartStreamProvider).asData?.value ?? const [];
+  return items.fold<int>(0, (sum, item) => sum + item.quantity);
 });
 
-/// Derived: cart subtotal — for Cart/Checkout screens.
-final cartTotalProvider = Provider<double>((ref) {
-  final cart = ref.watch(cartStreamProvider).valueOrNull ?? [];
-  return cart.fold<double>(0, (sum, item) => sum + item.subtotal);
+/// Subtotal in PKR across all cart items.
+final cartTotalProvider = Provider<int>((ref) {
+  final items = ref.watch(cartStreamProvider).asData?.value ?? const [];
+  return items.fold<int>(0, (sum, item) => sum + item.subtotal);
 });
 
-/// Actions notifier — screens call these, UI updates via cartStreamProvider.
-class CartActions extends Notifier<AsyncValue<void>> {
+/// Write-side actions (add/update/remove/clear), separate from the
+/// read-side stream above.
+class CartActions extends Notifier<void> {
   @override
-  AsyncValue<void> build() => const AsyncValue.data(null);
+  void build() {}
 
-  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
-
-  Future<void> addItem(CartItem item) async {
-    final uid = _uid;
-    if (uid == null) return;
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(
-          () => ref.read(cartRepositoryProvider).addItem(uid, item),
+  Future<void> addItem(Product product) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final item = CartItem(
+      listingId: product.id,
+      name: product.name,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      size: product.size,
+      sellerId: product.seller.id,
     );
+    await ref.read(cartRepositoryProvider).addItem(user.uid, item);
   }
 
   Future<void> updateQuantity(String listingId, int quantity) async {
-    final uid = _uid;
-    if (uid == null) return;
-    state = await AsyncValue.guard(
-          () => ref
-          .read(cartRepositoryProvider)
-          .updateQuantity(uid, listingId, quantity),
-    );
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    await ref
+        .read(cartRepositoryProvider)
+        .updateQuantity(user.uid, listingId, quantity);
   }
 
   Future<void> removeItem(String listingId) async {
-    final uid = _uid;
-    if (uid == null) return;
-    state = await AsyncValue.guard(
-          () => ref.read(cartRepositoryProvider).removeItem(uid, listingId),
-    );
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    await ref.read(cartRepositoryProvider).removeItem(user.uid, listingId);
   }
 
   Future<void> clearCart() async {
-    final uid = _uid;
-    if (uid == null) return;
-    state = await AsyncValue.guard(
-          () => ref.read(cartRepositoryProvider).clearCart(uid),
-    );
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    await ref.read(cartRepositoryProvider).clearCart(user.uid);
+  }
+
+  /// Whether a listing is currently in the cart — used to disable the
+  /// "Add to Cart" button and show "In Cart" instead.
+  bool contains(String listingId) {
+    final items = ref.read(cartStreamProvider).asData?.value ?? const [];
+    return items.any((i) => i.listingId == listingId);
   }
 }
 
-final cartActionsProvider =
-NotifierProvider<CartActions, AsyncValue<void>>(CartActions.new);
+final cartActionsProvider = NotifierProvider<CartActions, void>(CartActions.new);

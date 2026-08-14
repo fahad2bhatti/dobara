@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
-import '../../../cart/domain/cart_provider.dart';
+import '../../../cart/data/cart_providers.dart';
 import '../../../cart/presentation/screens/cart_screen.dart';
 import '../../../listings/domain/listings_provider.dart';
 import '../../../listings/presentation/screens/listing_detail_screen.dart';

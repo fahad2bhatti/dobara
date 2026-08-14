@@ -2,31 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../shared/models/product_model.dart';
-import '../../../../shared/widgets/condition_badge.dart';
-import '../../domain/cart_provider.dart';
+import '../../../../shared/models/cart_model.dart';
+import '../../data/cart_providers.dart';
 import '../../../checkout/presentation/screens/checkout_screen.dart';
 
-const int _kDeliveryFee = 200; // flat MVP delivery fee, Rs.
+const int _kDeliveryFee = 200;
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(cartProvider);
-    final subtotal = ref.watch(cartSubtotalProvider);
-    final total = items.isEmpty ? 0 : subtotal + _kDeliveryFee;
+    final cartAsync = ref.watch(cartStreamProvider);
+    final subtotal = ref.watch(cartTotalProvider);
+    final count = ref.watch(cartCountProvider);
+    final total = count == 0 ? 0 : subtotal + _kDeliveryFee;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Cart${items.isNotEmpty ? ' (${items.length})' : ''}'),
+        title: Text('Cart${count > 0 ? ' ($count)' : ''}'),
       ),
       body: SafeArea(
-        child: items.isEmpty ? _buildEmpty() : _buildCartList(context, ref, items),
+        child: cartAsync.when(
+          data: (items) =>
+          items.isEmpty ? _buildEmpty() : _buildCartList(context, ref, items),
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+          ),
+          error: (err, _) => const Center(
+            child: Text('Could not load your cart.',
+                style: TextStyle(color: AppColors.textTertiary)),
+          ),
+        ),
       ),
-      bottomNavigationBar: items.isEmpty
+      bottomNavigationBar: cartAsync.asData?.value.isEmpty ?? true
           ? null
           : _buildSummaryBar(context, subtotal, total),
     );
@@ -67,13 +77,13 @@ class CartScreen extends ConsumerWidget {
   }
 
   Widget _buildCartList(
-      BuildContext context, WidgetRef ref, List<Product> items) {
+      BuildContext context, WidgetRef ref, List<CartItem> items) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       itemCount: items.length,
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
-        final p = items[i];
+        final item = items[i];
         return Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -95,10 +105,21 @@ class CartScreen extends ConsumerWidget {
                 child: SizedBox(
                   width: 76,
                   height: 96,
-                  child: CachedNetworkImage(
-                    imageUrl: p.imageUrl,
+                  child: item.imageUrl.isEmpty
+                      ? Container(
+                    color: AppColors.muted,
+                    child: const Icon(Icons.image_not_supported_outlined,
+                        color: AppColors.textTertiary),
+                  )
+                      : CachedNetworkImage(
+                    imageUrl: item.imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(color: AppColors.muted),
+                    placeholder: (_, __) => Container(color: AppColors.muted),
+                    errorWidget: (_, __, ___) => Container(
+                      color: AppColors.muted,
+                      child: const Icon(Icons.image_not_supported_outlined,
+                          color: AppColors.textTertiary),
+                    ),
                   ),
                 ),
               ),
@@ -108,7 +129,7 @@ class CartScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      p.name,
+                      item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -117,30 +138,41 @@ class CartScreen extends ConsumerWidget {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${p.brand} · ${p.seller.name}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textTertiary,
+                    if (item.size != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Size: ${item.size}',
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textTertiary),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    ConditionBadge(grade: p.condition),
+                    ],
                     const SizedBox(height: 8),
-                    Text(
-                      'Rs. ${_formatPrice(p.price)}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Rs. ${_formatPrice(item.price)}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        if (item.quantity > 1)
+                          Text(
+                            'Qty: ${item.quantity}',
+                            style: const TextStyle(
+                                fontSize: 11, color: AppColors.textTertiary),
+                          ),
+                      ],
                     ),
                   ],
                 ),
               ),
               GestureDetector(
-                onTap: () => ref.read(cartProvider.notifier).remove(p.id),
+                onTap: () => ref
+                    .read(cartActionsProvider.notifier)
+                    .removeItem(item.listingId),
                 child: const Padding(
                   padding: EdgeInsets.all(4),
                   child: Icon(Icons.close, size: 18, color: AppColors.textTertiary),

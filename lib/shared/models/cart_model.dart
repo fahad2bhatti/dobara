@@ -1,11 +1,13 @@
-// lib/shared/models/cart_model.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// A single item in a user's cart, stored at
+/// cart/{uid}/items/{listingId} — doc id IS the listingId, so adding
+/// the same listing twice just increments quantity instead of
+/// duplicating a row.
 class CartItem {
   final String listingId;
   final String name;
-  final double price;
+  final int price;
   final String imageUrl;
   final String? size;
   final String sellerId;
@@ -23,49 +25,40 @@ class CartItem {
     this.addedAt,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'listingId': listingId,
-      'name': name,
-      'price': price,
-      'imageUrl': imageUrl,
-      'size': size,
-      'sellerId': sellerId,
-      'quantity': quantity,
-      // Note: FieldValue.serverTimestamp() doesn't work inside arrays.
-      // We use a client Timestamp here — acceptable for a non-critical
-      // "addedAt" display field. Order writes still use serverTimestamp().
-      'addedAt': addedAt != null
-          ? Timestamp.fromDate(addedAt!)
-          : Timestamp.now(),
-    };
-  }
+  int get subtotal => price * quantity;
 
-  factory CartItem.fromMap(Map<String, dynamic> map) {
+  Map<String, dynamic> toMap() => {
+    'listingId': listingId,
+    'name': name,
+    'price': price,
+    'imageUrl': imageUrl,
+    'size': size,
+    'sellerId': sellerId,
+    'quantity': quantity,
+    'addedAt': FieldValue.serverTimestamp(),
+  };
+
+  factory CartItem.fromMap(String id, Map<String, dynamic> map) {
     return CartItem(
-      listingId: map['listingId'] as String,
-      name: map['name'] as String,
-      price: (map['price'] as num).toDouble(),
-      imageUrl: map['imageUrl'] as String,
-      size: map['size'] as String?,
-      sellerId: map['sellerId'] as String,
+      listingId: id,
+      name: map['name'] ?? '',
+      price: (map['price'] as num?)?.toInt() ?? 0,
+      imageUrl: map['imageUrl'] ?? '',
+      size: map['size'],
+      sellerId: map['sellerId'] ?? '',
       quantity: (map['quantity'] as num?)?.toInt() ?? 1,
       addedAt: (map['addedAt'] as Timestamp?)?.toDate(),
     );
   }
 
-  CartItem copyWith({int? quantity}) {
-    return CartItem(
-      listingId: listingId,
-      name: name,
-      price: price,
-      imageUrl: imageUrl,
-      size: size,
-      sellerId: sellerId,
-      quantity: quantity ?? this.quantity,
-      addedAt: addedAt,
-    );
-  }
-
-  double get subtotal => price * quantity;
+  CartItem copyWith({int? quantity}) => CartItem(
+    listingId: listingId,
+    name: name,
+    price: price,
+    imageUrl: imageUrl,
+    size: size,
+    sellerId: sellerId,
+    quantity: quantity ?? this.quantity,
+    addedAt: addedAt,
+  );
 }
