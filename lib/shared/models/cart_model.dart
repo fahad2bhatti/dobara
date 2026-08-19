@@ -11,6 +11,7 @@ class CartItem {
   final String imageUrl;
   final String? size;
   final String sellerId;
+  final String sellerName;
   final int quantity;
   final DateTime? addedAt;
 
@@ -21,6 +22,7 @@ class CartItem {
     required this.imageUrl,
     this.size,
     required this.sellerId,
+    required this.sellerName,
     this.quantity = 1,
     this.addedAt,
   });
@@ -47,7 +49,7 @@ class CartItem {
       size: map['size'],
       sellerId: map['sellerId'] ?? '',
       quantity: (map['quantity'] as num?)?.toInt() ?? 1,
-      addedAt: (map['addedAt'] as Timestamp?)?.toDate(),
+      addedAt: (map['addedAt'] as Timestamp?)?.toDate(), sellerName: '',
     );
   }
 
@@ -59,6 +61,6 @@ class CartItem {
     size: size,
     sellerId: sellerId,
     quantity: quantity ?? this.quantity,
-    addedAt: addedAt,
+    addedAt: addedAt, sellerName: sellerName,
   );
 }

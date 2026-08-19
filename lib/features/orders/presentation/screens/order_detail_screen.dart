@@ -150,7 +150,7 @@ class OrderDetailScreen extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textPrimary)),
                           const SizedBox(height: 2),
-                          Text('Sold by ${p.seller.name}',
+                          Text('Sold by ${p.sellerName}',
                               style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.textTertiary)),

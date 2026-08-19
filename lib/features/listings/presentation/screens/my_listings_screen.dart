@@ -6,7 +6,7 @@ import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../../auth/domain/auth_provider.dart';
 import '../../domain/listings_provider.dart';
-import 'listing_detail_screen.dart';
+import 'package:go_router/go_router.dart';
 
 /// The signed-in seller's own published listings — filters the same
 /// live Firestore stream Home/Explore use, down to this user's items.
@@ -84,9 +84,7 @@ class MyListingsScreen extends ConsumerWidget {
       itemBuilder: (context, i) {
         final p = items[i];
         return GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ListingDetailScreen(product: p)),
-          ),
+          onTap: () => context.push('/listing-detail', extra: p),
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(

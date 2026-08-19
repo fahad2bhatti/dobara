@@ -1,25 +1,30 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/order_model.dart';
+import '../../auth/domain/auth_provider.dart';
+import '../data/orders_repository.dart';
 
-/// In-memory order history for this session. Newest first.
-/// TODO Phase 11 (post-auth Firestore pass): persist to Firestore
-/// under orders/{orderId}, scoped to the real signed-in user.
-class OrdersNotifier extends Notifier<List<Order>> {
+final ordersRepositoryProvider =
+Provider<OrdersRepository>((ref) => OrdersRepository());
+
+/// Live order history for the signed-in buyer. Empty when signed out.
+final ordersStreamProvider = StreamProvider<List<Order>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return Stream.value(const []);
+  return ref.watch(ordersRepositoryProvider).watchOrders(user.uid);
+});
+
+class OrdersActions extends Notifier<void> {
   @override
-  List<Order> build() => [];
+  void build() {}
 
-  void addOrder(Order order) {
-    state = [order, ...state];
+  Future<String> placeOrder(Order order) {
+    return ref.read(ordersRepositoryProvider).placeOrder(order);
   }
 
-  void updateStatus(String orderId, OrderStatus status) {
-    state = [
-      for (final o in state)
-        if (o.id == orderId) o.copyWith(status: status) else o,
-    ];
+  Future<void> updateStatus(String orderId, OrderStatus status) {
+    return ref.read(ordersRepositoryProvider).updateStatus(orderId, status);
   }
 }
 
-final ordersProvider = NotifierProvider<OrdersNotifier, List<Order>>(
-  OrdersNotifier.new,
-);
+final ordersActionsProvider =
+NotifierProvider<OrdersActions, void>(OrdersActions.new);

@@ -4,8 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../home/data/mock_products.dart';
 import '../../../orders/domain/orders_provider.dart';
 import '../../domain/reports_provider.dart';
-import 'listings_moderation_screen.dart';
-import 'reports_screen.dart';
+import 'package:go_router/go_router.dart';
 
 /// Admin dashboard — basic metrics + moderation entry points (Doc 5 §22).
 /// TODO Phase 10/11: gate this screen behind an admin role check once
@@ -16,7 +15,7 @@ class AdminDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final orders = ref.watch(ordersProvider);
+    final ordersAsync = ref.watch(ordersStreamProvider);
     final reports = ref.watch(reportsProvider);
 
     return Scaffold(
@@ -50,7 +49,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                       AppColors.primary),
                   _metricCard('Active Listings', '${mockProducts.length}',
                       Icons.local_offer_outlined, AppColors.accent),
-                  _metricCard('Orders', '${orders.length}',
+                  _metricCard('Orders', '${ordersAsync.asData?.value.length ?? 0}',
                       Icons.receipt_long_outlined, const Color(0xFF0B3A6E)),
                   _metricCard('Open Reports', '${reports.length}',
                       Icons.flag_outlined, AppColors.errorText),
@@ -72,9 +71,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 icon: Icons.flag_outlined,
                 label: 'User Reports',
                 trailing: reports.isNotEmpty ? '${reports.length}' : null,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ReportsScreen()),
-                ),
+                onTap: () => context.push('/admin/reports'),
               ),
               const SizedBox(height: 8),
               _menuRow(
@@ -82,10 +79,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 icon: Icons.local_offer_outlined,
                 label: 'Listings',
                 trailing: '${mockProducts.length}',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const ListingsModerationScreen()),
-                ),
+                onTap: () => context.push('/admin/listings'),
               ),
             ],
           ),

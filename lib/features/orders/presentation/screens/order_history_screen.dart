@@ -3,20 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/order_model.dart';
 import '../../domain/orders_provider.dart';
-import 'order_detail_screen.dart';
+
+
+import 'package:go_router/go_router.dart';
 
 class OrderHistoryScreen extends ConsumerWidget {
   const OrderHistoryScreen({super.key});
 
   @override
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final orders = ref.watch(ordersProvider);
+    final ordersAsync = ref.watch(ordersStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('My Orders')),
       body: SafeArea(
-        child: orders.isEmpty ? _buildEmpty() : _buildList(context, orders),
+        child: ordersAsync.when(
+          data: (orders) =>
+          orders.isEmpty ? _buildEmpty() : _buildList(context, orders),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Could not load orders: $e')),
+        ),
       ),
     );
   }
@@ -63,9 +71,7 @@ class OrderHistoryScreen extends ConsumerWidget {
       itemBuilder: (context, i) {
         final order = orders[i];
         return GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => OrderDetailScreen(order: order)),
-          ),
+          onTap: () => context.push('/order-history/detail', extra: order),
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(

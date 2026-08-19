@@ -359,27 +359,6 @@
             </list>
           </value>
         </entry>
-        <entry key="firebase_storage">
-          <value>
-            <list>
-              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_storage-13.4.6/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="firebase_storage_platform_interface">
-          <value>
-            <list>
-              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_storage_platform_interface-6.0.6/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="firebase_storage_web">
-          <value>
-            <list>
-              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_storage_web-3.11.12/lib" />
-            </list>
-          </value>
-        </entry>
         <entry key="fixnum">
           <value>
             <list>
@@ -1141,9 +1120,6 @@
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_messaging-16.5.0/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_messaging_platform_interface-4.9.3/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_messaging_web-4.2.4/lib" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_storage-13.4.6/lib" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_storage_platform_interface-6.0.6/lib" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_storage_web-3.11.12/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/fixnum-1.1.1/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/flutter_cache_manager-3.4.2/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/flutter_lints-6.0.0/lib" />

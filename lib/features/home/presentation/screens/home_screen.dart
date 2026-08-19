@@ -4,9 +4,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
 import '../../../cart/data/cart_providers.dart';
-import '../../../cart/presentation/screens/cart_screen.dart';
 import '../../../listings/domain/listings_provider.dart';
-import '../../../listings/presentation/screens/listing_detail_screen.dart';
+import 'package:go_router/go_router.dart';
 
 const List<String> _kCategories = [
   'All',
@@ -41,9 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _openProduct(Product p) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ListingDetailScreen(product: p)),
-    );
+    context.push('/listing-detail', extra: p);
   }
 
   @override
@@ -129,9 +126,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Builder(builder: (context) {
                     final count = ref.watch(cartCountProvider);
                     return GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CartScreen()),
-                      ),
+                      onTap: () => context.push('/cart'),
                       child: _circleIconButton(
                         Icons.shopping_bag_outlined,
                         badgeCount: count > 0 ? count : null,

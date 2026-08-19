@@ -7,7 +7,6 @@ import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
 import '../../../auth/domain/auth_provider.dart';
-import '../../../auth/presentation/screens/login_screen.dart';
 import '../../domain/listings_provider.dart';
 
 const List<String> _kSellCategories = ['Clothing', 'Shoes', 'Bags', 'Accessories'];
@@ -91,28 +90,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   // TEMP: while Storage billing is unresolved, publish with a category
   // placeholder instead of the picked photos. Remove once Storage works.
-  String _placeholderImage(String category) {
-    switch (category) {
-      case 'Shoes':
-        return 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&h=520&fit=crop&auto=format';
-      case 'Bags':
-        return 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=520&fit=crop&auto=format';
-      case 'Accessories':
-        return 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=520&fit=crop&auto=format';
-      default:
-        return 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=520&fit=crop&auto=format';
-    }
-  }
 
   Future<void> _publishListing() async {
-    var user = ref.read(currentUserProvider);
-    if (user == null) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-      user = ref.read(currentUserProvider);
-      if (user == null) return; // still not signed in — user backed out
-    }
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
 
     setState(() => _publishing = true);
 
@@ -140,8 +121,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         city: profile?.city ?? 'Lahore',
         description: _form.description,
         seller: seller,
-        images: const [], // TEMP: Storage billing not resolved yet
-        placeholderImageUrl: _placeholderImage(_form.category),
+        images: _pickedImages,
       );
       if (mounted) {
         setState(() {

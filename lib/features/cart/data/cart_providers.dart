@@ -41,6 +41,7 @@ class CartActions extends Notifier<void> {
       imageUrl: product.imageUrl,
       size: product.size,
       sellerId: product.seller.id,
+      sellerName: product.seller.name,
     );
     await ref.read(cartRepositoryProvider).addItem(user.uid, item);
   }

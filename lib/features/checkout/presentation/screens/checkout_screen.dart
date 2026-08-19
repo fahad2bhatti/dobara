@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/order_model.dart';
-import '../../../cart/domain/cart_provider.dart';
+import '../../../auth/domain/auth_provider.dart';
+import '../../../cart/data/cart_providers.dart';
 import '../../../orders/domain/orders_provider.dart';
 
 const int _kDeliveryFee = 200;
@@ -20,6 +21,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   bool _placed = false;
+  bool _placing = false;
 
   @override
   void dispose() {
@@ -36,14 +38,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _addressController.text.trim().isNotEmpty &&
           _cityController.text.trim().isNotEmpty;
 
-  void _placeOrder() {
-    if (!_canPlaceOrder) return;
+  Future<void> _placeOrder() async {
+    if (!_canPlaceOrder || _placing) return;
 
-    final items = ref.read(cartProvider);
-    final subtotal = ref.read(cartSubtotalProvider);
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    final cartItems = ref.read(cartStreamProvider).asData?.value ?? const [];
+    if (cartItems.isEmpty) return;
+
+    setState(() => _placing = true);
+
+    final subtotal = ref.read(cartTotalProvider);
     final order = Order(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      items: items,
+      id: '', // assigned by Firestore on write
+      buyerId: user.uid,
+      items: cartItems.map(OrderItem.fromCartItem).toList(),
       subtotal: subtotal,
       deliveryFee: _kDeliveryFee,
       total: subtotal + _kDeliveryFee,
@@ -52,22 +62,33 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       address: _addressController.text.trim(),
       city: _cityController.text.trim(),
       status: OrderStatus.placed,
-      placedAt: DateTime.now(),
+      placedAt: DateTime.now(), // local placeholder; toMap() writes the real server value
     );
 
-    // TODO Phase 11 (post-auth Firestore pass): write this order doc
-    // to Firestore under orders/{orderId}, tied to the real user id.
-    ref.read(ordersProvider.notifier).addOrder(order);
-    ref.read(cartProvider.notifier).clear();
-    setState(() => _placed = true);
+    try {
+      await ref.read(ordersActionsProvider.notifier).placeOrder(order);
+      await ref.read(cartActionsProvider.notifier).clearCart();
+      if (!mounted) return;
+      setState(() {
+        _placing = false;
+        _placed = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _placing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not place order: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_placed) return _buildConfirmation();
 
-    final items = ref.watch(cartProvider);
-    final subtotal = ref.watch(cartSubtotalProvider);
+    final cartAsync = ref.watch(cartStreamProvider);
+    final items = cartAsync.asData?.value ?? const [];
+    final subtotal = ref.watch(cartTotalProvider);
     final total = subtotal + _kDeliveryFee;
 
     return Scaffold(
@@ -89,8 +110,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     _input(_phoneController, 'Phone Number',
                         keyboardType: TextInputType.phone),
                     const SizedBox(height: 10),
-                    _input(_addressController, 'Street Address',
-                        maxLines: 2),
+                    _input(_addressController, 'Street Address', maxLines: 2),
                     const SizedBox(height: 10),
                     _input(_cityController, 'City'),
                     const SizedBox(height: 6),
@@ -107,13 +127,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     const SizedBox(height: 10),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 13),
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                       decoration: BoxDecoration(
                         color: AppColors.muted,
                         borderRadius: BorderRadius.circular(14),
-                        border:
-                        Border.all(color: AppColors.primary, width: 2),
+                        border: Border.all(color: AppColors.primary, width: 2),
                       ),
                       child: Row(
                         children: [
@@ -140,8 +159,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     const SizedBox(height: 10),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(14),
@@ -149,13 +168,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       child: Column(
                         children: [
-                          ...items.map((p) => Padding(
+                          ...items.map((item) => Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Text(
-                                    p.name,
+                                    item.quantity > 1
+                                        ? '${item.name} x${item.quantity}'
+                                        : item.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -164,7 +185,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'Rs. ${_formatPrice(p.price)}',
+                                  'Rs. ${_formatPrice(item.subtotal)}',
                                   style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
@@ -177,8 +198,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           _summaryRow(
                               'Subtotal', 'Rs. ${_formatPrice(subtotal)}'),
                           const SizedBox(height: 4),
-                          _summaryRow('Delivery',
-                              'Rs. ${_formatPrice(_kDeliveryFee)}'),
+                          _summaryRow(
+                              'Delivery', 'Rs. ${_formatPrice(_kDeliveryFee)}'),
                           const SizedBox(height: 8),
                           const Divider(height: 1, color: AppColors.divider),
                           const SizedBox(height: 8),
@@ -195,12 +216,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
               decoration: const BoxDecoration(
                 color: AppColors.background,
-                border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+                border:
+                Border(top: BorderSide(color: AppColors.border, width: 1)),
               ),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: items.isEmpty ? null : _placeOrder,
+                  onPressed: (items.isEmpty || _placing) ? null : _placeOrder,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor:
@@ -211,8 +233,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  child: Text(
-                    'Place Order · Rs. ${_formatPrice(total)}',
+                  child: _placing
+                      ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                      : Text(
+                    'Place Order — Rs. ${_formatPrice(total)}',
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w600),
                   ),
@@ -275,8 +304,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             style: TextStyle(
                 fontSize: bold ? 14 : 12,
                 fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
-                color:
-                bold ? AppColors.textPrimary : AppColors.textTertiary)),
+                color: bold ? AppColors.textPrimary : AppColors.textTertiary)),
         Text(value,
             style: TextStyle(
                 fontSize: bold ? 16 : 13,
@@ -315,7 +343,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   'Pay on delivery. You\'ll get updates as your order is confirmed and shipped.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 13, color: AppColors.mutedForeground, height: 1.6),
+                      fontSize: 13,
+                      color: AppColors.mutedForeground,
+                      height: 1.6),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
@@ -325,8 +355,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.primaryForeground,
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                     elevation: 0,

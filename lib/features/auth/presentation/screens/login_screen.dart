@@ -3,7 +3,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/auth_provider.dart';
-import 'signup_screen.dart';
+//import 'signup_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -42,7 +43,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final service = ref.read(firebaseAuthServiceProvider);
     try {
       await service.signIn(email: email, password: password);
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        final from = GoRouterState.of(context).uri.queryParameters['from'];
+        context.go(from ?? '/home');
+      }
     } catch (e) {
       setState(() => _error = service.friendlyError(e));
     } finally {
@@ -193,12 +197,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                  builder: (_) => const SignUpScreen()),
-                            );
-                          },
+                          ..onTap = () => context.go('/signup'),
                       ),
                     ],
                   ),

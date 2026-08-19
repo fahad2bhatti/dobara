@@ -4,7 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
 import '../../domain/listings_provider.dart';
-import 'listing_detail_screen.dart';
+import 'package:go_router/go_router.dart';
 
 const List<String> _kExploreConditions = [
   'All',
@@ -46,9 +46,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   void _openProduct(Product p) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ListingDetailScreen(product: p)),
-    );
+    context.push('/listing-detail', extra: p);
   }
 
   @override

@@ -6,9 +6,9 @@ import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
 import '../../../cart/data/cart_providers.dart';
-import '../../../cart/presentation/screens/cart_screen.dart';
 import '../../../../shared/models/report_model.dart';
 import '../widgets/report_sheet.dart';
+import 'package:go_router/go_router.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -412,13 +412,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                           duration: const Duration(seconds: 2),
                           action: SnackBarAction(
                             label: 'View Cart',
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const CartScreen(),
-                                ),
-                              );
-                            },
+                            onPressed: () => context.push('/cart'),
                           ),
                         ),
                       );

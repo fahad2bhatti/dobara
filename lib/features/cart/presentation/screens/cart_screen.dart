@@ -4,7 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/cart_model.dart';
 import '../../data/cart_providers.dart';
-import '../../../checkout/presentation/screens/checkout_screen.dart';
+import 'package:go_router/go_router.dart';
+
 
 const int _kDeliveryFee = 200;
 
@@ -114,8 +115,8 @@ class CartScreen extends ConsumerWidget {
                       : CachedNetworkImage(
                     imageUrl: item.imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: AppColors.muted),
-                    errorWidget: (_, __, ___) => Container(
+                    placeholder: (_, _) => Container(color: AppColors.muted),
+                    errorWidget: (_, _, _) => Container(
                       color: AppColors.muted,
                       child: const Icon(Icons.image_not_supported_outlined,
                           color: AppColors.textTertiary),
@@ -208,11 +209,7 @@ class CartScreen extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CheckoutScreen()),
-                  );
-                },
+                onPressed: () => context.push('/checkout'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.primaryForeground,
