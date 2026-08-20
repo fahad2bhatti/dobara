@@ -244,10 +244,19 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                 CircleAvatar(
                                   radius: 21,
                                   backgroundColor: AppColors.neutral200,
-                                  backgroundImage:
-                                  CachedNetworkImageProvider(
+                                  backgroundImage: p.seller.avatarUrl.isEmpty
+                                      ? null
+                                      : CachedNetworkImageProvider(
                                     p.seller.avatarUrl,
                                   ),
+                                  onBackgroundImageError:
+                                  p.seller.avatarUrl.isEmpty
+                                      ? null
+                                      : (_, _) {},
+                                  child: p.seller.avatarUrl.isEmpty
+                                      ? const Icon(Icons.person_outline,
+                                      size: 20, color: AppColors.textTertiary)
+                                      : null,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

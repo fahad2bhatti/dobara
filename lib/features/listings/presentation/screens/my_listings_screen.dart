@@ -106,10 +106,21 @@ class MyListingsScreen extends ConsumerWidget {
                   child: SizedBox(
                     width: 60,
                     height: 76,
-                    child: CachedNetworkImage(
+                    child: p.imageUrl.isEmpty
+                        ? Container(
+                      color: AppColors.muted,
+                      child: const Icon(Icons.image_not_supported_outlined,
+                          size: 18, color: AppColors.textTertiary),
+                    )
+                        : CachedNetworkImage(
                       imageUrl: p.imageUrl,
                       fit: BoxFit.cover,
                       placeholder: (_, _) => Container(color: AppColors.muted),
+                      errorWidget: (_, _, _) => Container(
+                        color: AppColors.muted,
+                        child: const Icon(Icons.image_not_supported_outlined,
+                            size: 18, color: AppColors.textTertiary),
+                      ),
                     ),
                   ),
                 ),

@@ -131,11 +131,22 @@ class OrderDetailScreen extends StatelessWidget {
                       child: SizedBox(
                         width: 52,
                         height: 64,
-                        child: CachedNetworkImage(
+                        child: p.imageUrl.isEmpty
+                            ? Container(
+                          color: AppColors.muted,
+                          child: const Icon(Icons.image_not_supported_outlined,
+                              size: 20, color: AppColors.textTertiary),
+                        )
+                            : CachedNetworkImage(
                           imageUrl: p.imageUrl,
                           fit: BoxFit.cover,
                           placeholder: (_, _) =>
                               Container(color: AppColors.muted),
+                          errorWidget: (_, _, _) => Container(
+                            color: AppColors.muted,
+                            child: const Icon(Icons.image_not_supported_outlined,
+                                size: 20, color: AppColors.textTertiary),
+                          ),
                         ),
                       ),
                     ),

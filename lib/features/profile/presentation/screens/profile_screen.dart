@@ -3,20 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../orders/presentation/screens/order_history_screen.dart';
 import '../../../admin/presentation/screens/admin_dashboard_screen.dart';
-import '../../../auth/domain/auth_provider.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../listings/presentation/screens/my_listings_screen.dart';
+import '../../../auth/domain/auth_provider.dart';
 
-const List<List<String>> _kMenuItems = [
-  ['📦', 'My Orders'],
-  ['🏷️', 'My Listings'],
-  ['❤️', 'Saved Items'],
-  ['⭐', 'Reviews'],
-  ['🔔', 'Notifications'],
-  ['⚙️', 'Settings'],
-  ['🛠️', 'Admin Panel'], // TEMP: visible to everyone until Phase 10 role check
-  ['🚪', 'Sign Out'],
-];
 
 /// Buyer's own profile — stats card, "Become a Seller" upsell, menu.
 /// Currently shows a "Guest User" placeholder; will read real user
@@ -28,6 +18,18 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final isSignedIn = user != null;
+    final isAdmin = ref.watch(isAdminProvider);
+
+    final menuItems = <List<String>>[
+      ['📦', 'My Orders'],
+      ['🏷️', 'My Listings'],
+      ['💗', 'Saved Items'],
+      ['⭐', 'Reviews'],
+      ['🔔', 'Notifications'],
+      ['⚙️', 'Settings'],
+      if (isAdmin) ['🛡️', 'Admin Panel'],
+      ['🚪', 'Sign Out'],
+    ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -215,9 +217,9 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                 ),
                 child: Column(
-                  children: List.generate(_kMenuItems.length, (i) {
-                    final item = _kMenuItems[i];
-                    final isLast = i == _kMenuItems.length - 1;
+                  children: List.generate(menuItems.length, (i) {
+                    final item = menuItems[i];
+                    final isLast = i == menuItems.length - 1;
                     return InkWell(
                       onTap: () {
                         if (item[1] == 'My Orders') {

@@ -83,6 +83,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isLoggedIn && goingToAuthScreen) {
         return '/home';
       }
+
+      // Admin routes need the role check too, not just signed-in status.
+      // isLoggedIn is already true here if we've reached this point and
+      // the path is /admin (protected paths would've redirected above).
+      final isAdminRoute = state.matchedLocation == '/admin' ||
+          state.matchedLocation.startsWith('/admin/');
+      if (isAdminRoute && !ref.read(isAdminProvider)) {
+        return '/home';
+      }
+
       return null;
     },
     routes: [
