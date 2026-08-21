@@ -73,8 +73,24 @@ class ListingsRepository {
     await docRef.set(product.toMap());
     return docRef.id;
   }
+
+  Future<void> deleteListing(String listingId) {           // ADD THIS
+    return _listingsCollection.doc(listingId).delete();     // ADD THIS
+  }
 }
 
 final listingsRepositoryProvider = Provider<ListingsRepository>((ref) {
   return ListingsRepository(ref.watch(storageServiceProvider));
 });
+
+class ListingsActions extends Notifier<void> {              // ADD FROM HERE
+  @override
+  void build() {}
+
+  Future<void> deleteListing(String listingId) {
+    return ref.read(listingsRepositoryProvider).deleteListing(listingId);
+  }
+}
+
+final listingsActionsProvider =
+NotifierProvider<ListingsActions, void>(ListingsActions.new);  // TO HERE

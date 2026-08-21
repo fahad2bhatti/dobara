@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../home/data/mock_products.dart';
 import '../../../orders/domain/orders_provider.dart';
 import '../../domain/reports_provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../domain/users_provider.dart';
+import '../../../listings/domain/listings_provider.dart';
 
 /// Admin dashboard — basic metrics + moderation entry points (Doc 5 §22).
 /// TODO Phase 10/11: gate this screen behind an admin role check once
@@ -17,6 +18,8 @@ class AdminDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ordersAsync = ref.watch(ordersStreamProvider);
     final reports = ref.watch(reportsProvider);
+    final usersAsync = ref.watch(usersStreamProvider);
+    final listingsAsync = ref.watch(listingsStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -45,9 +48,10 @@ class AdminDashboardScreen extends ConsumerWidget {
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.5,
                 children: [
-                  _metricCard('Users', '1', Icons.people_outline,
-                      AppColors.primary),
-                  _metricCard('Active Listings', '${mockProducts.length}',
+                  _metricCard('Users', '${usersAsync.asData?.value.length ?? 0}',
+                      Icons.people_outline, AppColors.primary),
+                  _metricCard('Active Listings',
+                      '${listingsAsync.asData?.value.length ?? 0}',
                       Icons.local_offer_outlined, AppColors.accent),
                   _metricCard('Orders', '${ordersAsync.asData?.value.length ?? 0}',
                       Icons.receipt_long_outlined, const Color(0xFF0B3A6E)),
@@ -78,9 +82,18 @@ class AdminDashboardScreen extends ConsumerWidget {
                 context,
                 icon: Icons.local_offer_outlined,
                 label: 'Listings',
-                trailing: '${mockProducts.length}',
+                trailing: '${listingsAsync.asData?.value.length ?? 0}',
                 onTap: () => context.push('/admin/listings'),
               ),
+
+              const SizedBox(height: 8),                          // ADD
+              _menuRow(                                            // ADD
+                context,                                            // ADD
+                icon: Icons.people_outline,                         // ADD
+                label: 'Users',                                     // ADD
+                trailing: '${usersAsync.asData?.value.length ?? 0}', // ADD
+                onTap: () => context.push('/admin/users'),           // ADD
+              ),                                                    // ADD
             ],
           ),
         ),

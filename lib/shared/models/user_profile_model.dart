@@ -9,6 +9,7 @@ class UserProfile {
   final int completedSales;
   final String avatarUrl;
   final String city;
+  final bool isBanned;
 
   const UserProfile({
     required this.id,
@@ -19,6 +20,7 @@ class UserProfile {
     required this.completedSales,
     required this.avatarUrl,
     required this.city,
+    this.isBanned = false,
   });
 
   factory UserProfile.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -32,6 +34,7 @@ class UserProfile {
       completedSales: (map['completedSales'] as num?)?.toInt() ?? 0,
       avatarUrl: map['avatarUrl'] ?? '',
       city: map['city'] ?? 'Lahore',
+      isBanned: map['isBanned'] as bool? ?? false,
     );
   }
 }

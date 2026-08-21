@@ -24,6 +24,7 @@ import '../../features/admin/presentation/screens/reports_screen.dart';
 import '../../shared/models/product_model.dart';
 import '../../shared/models/order_model.dart';
 import 'app_shell_scaffold.dart';
+import '../../features/admin/presentation/screens/users_list_screen.dart';
 
 /// Routes that require a signed-in user. Home, Explore, and Wishlist
 /// stay open to guest browsing per product decision.
@@ -151,6 +152,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'reports',
             builder: (context, state) => const ReportsScreen(),
+          ),
+          GoRoute(                                                    // ADD
+            path: 'users',                                            // ADD
+            builder: (context, state) => const UsersListScreen(),      // ADD
           ),
         ],
       ),
