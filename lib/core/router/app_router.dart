@@ -94,6 +94,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
+      // Scope change: only admin can create listings now (Dobara is no
+      // longer peer-to-peer). Non-admins hitting /sell get bounced home.
+      if (state.matchedLocation == '/sell' && !ref.read(isAdminProvider)) {
+        return '/home';
+      }
+
       return null;
     },
     routes: [

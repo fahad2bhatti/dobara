@@ -26,11 +26,9 @@ service cloud.firestore {
 
     match /listings/{listingId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.sellerId == request.auth.uid;
-      allow update: if isSignedIn() &&
-        (resource.data.sellerId == request.auth.uid || isAdmin());
-      allow delete: if isSignedIn() &&
-        (resource.data.sellerId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /cart/{userId}/items/{itemId} {

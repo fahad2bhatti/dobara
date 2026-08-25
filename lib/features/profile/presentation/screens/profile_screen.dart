@@ -22,7 +22,7 @@ class ProfileScreen extends ConsumerWidget {
 
     final menuItems = <List<String>>[
       ['📦', 'My Orders'],
-      ['🏷️', 'My Listings'],
+      if (isAdmin) ['🏷️', 'My Listings'],
       ['💗', 'Saved Items'],
       ['⭐', 'Reviews'],
       ['🔔', 'Notifications'],
@@ -143,58 +143,6 @@ class ProfileScreen extends ConsumerWidget {
                           _statColumn('0', 'Purchases'),
                           _statColumn('—', 'Trust Score'),
                         ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // ── Become a seller ────────────────────────
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Start Selling on Dobara',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Turn your wardrobe into income. It takes 5 minutes.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.65),
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 18, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Become a Seller',
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
