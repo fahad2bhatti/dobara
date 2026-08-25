@@ -68,6 +68,7 @@ class Product {
   final String description;
   final Seller seller;
   final DateTime? createdAt;
+  final bool isSoldOut;
 
   const Product({
     required this.id,
@@ -82,6 +83,7 @@ class Product {
     required this.description,
     required this.seller,
     this.createdAt,
+    this.isSoldOut = false,
   });
 
   /// Convenience — first image, or a blank placeholder if none uploaded.
@@ -101,6 +103,7 @@ class Product {
     'sellerId': seller.id,
     'seller': seller.toMap(),
     'createdAt': FieldValue.serverTimestamp(),
+    'isSoldOut': isSoldOut,
   };
 
   factory Product.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -119,6 +122,7 @@ class Product {
       seller: Seller.fromMap(
           Map<String, dynamic>.from(map['seller'] ?? const {})),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
+      isSoldOut: map['isSoldOut'] ?? false,
     );
   }
 }

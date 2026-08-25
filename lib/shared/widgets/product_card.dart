@@ -64,6 +64,28 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ),
                   ),
+                  if (p.isSoldOut)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'SOLD OUT',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     top: 8,
                     left: 8,

@@ -77,6 +77,12 @@ class ListingsRepository {
   Future<void> deleteListing(String listingId) {           // ADD THIS
     return _listingsCollection.doc(listingId).delete();     // ADD THIS
   }
+
+  /// Partial update — pass only the fields that changed (e.g. price,
+  /// description, or just isSoldOut for the sold-out toggle).
+  Future<void> updateListing(String listingId, Map<String, dynamic> fields) {
+    return _listingsCollection.doc(listingId).update(fields);
+  }
 }
 
 final listingsRepositoryProvider = Provider<ListingsRepository>((ref) {
@@ -89,6 +95,14 @@ class ListingsActions extends Notifier<void> {              // ADD FROM HERE
 
   Future<void> deleteListing(String listingId) {
     return ref.read(listingsRepositoryProvider).deleteListing(listingId);
+  }
+
+  Future<void> updateListing(String listingId, Map<String, dynamic> fields) {
+    return ref.read(listingsRepositoryProvider).updateListing(listingId, fields);
+  }
+
+  Future<void> setSoldOut(String listingId, bool soldOut) {
+    return updateListing(listingId, {'isSoldOut': soldOut});
   }
 }
 

@@ -13,6 +13,7 @@ import '../../features/listings/presentation/screens/create_listing_screen.dart'
 import '../../features/listings/presentation/screens/wishlist_screen.dart';
 import '../../features/listings/presentation/screens/listing_detail_screen.dart';
 import '../../features/listings/presentation/screens/my_listings_screen.dart';
+import '../../features/listings/presentation/screens/edit_listing_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
 import '../../features/checkout/presentation/screens/checkout_screen.dart';
@@ -94,9 +95,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
-      // Scope change: only admin can create listings now (Dobara is no
-      // longer peer-to-peer). Non-admins hitting /sell get bounced home.
-      if (state.matchedLocation == '/sell' && !ref.read(isAdminProvider)) {
+      // Scope change: only admin can create/manage listings now (Dobara
+      // is no longer peer-to-peer). Non-admins hitting these get bounced.
+      const adminOnlyPaths = ['/sell', '/my-listings', '/edit-listing'];
+      if (adminOnlyPaths.contains(state.matchedLocation) &&
+          !ref.read(isAdminProvider)) {
         return '/home';
       }
 
@@ -119,6 +122,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final product = state.extra as Product;
           return ListingDetailScreen(product: product);
+        },
+      ),
+
+      // Admin-only — pushed from My Listings with `extra: product`.
+      GoRoute(
+        path: '/edit-listing',
+        builder: (context, state) {
+          final product = state.extra as Product;
+          return EditListingScreen(product: product);
         },
       ),
 

@@ -23,12 +23,19 @@ class ListingDetailScreen extends ConsumerStatefulWidget {
 class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
   bool _wish = false;
   int _imgIdx = 0;
+  final PageController _pageController = PageController();
 
   List<String> get _images {
     final p = widget.product;
     return p.imageUrls.isNotEmpty
         ? p.imageUrls
         : ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=520&fit=crop&auto=format'];
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -76,7 +83,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image
+                    // Image gallery — swipeable, with dot indicators
                     Container(
                       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                       clipBehavior: Clip.antiAlias,
@@ -86,9 +93,41 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                       ),
                       child: AspectRatio(
                         aspectRatio: 4 / 5,
-                        child: CachedNetworkImage(
-                          imageUrl: _images[_imgIdx],
-                          fit: BoxFit.cover,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            PageView.builder(
+                              controller: _pageController,
+                              itemCount: _images.length,
+                              onPageChanged: (i) => setState(() => _imgIdx = i),
+                              itemBuilder: (context, i) => CachedNetworkImage(
+                                imageUrl: _images[i],
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            if (p.isSoldOut)
+                              Positioned(
+                                top: 12,
+                                left: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.75),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: const Text(
+                                    'SOLD OUT',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -101,7 +140,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                         children: List.generate(_images.length, (i) {
                           final active = i == _imgIdx;
                           return GestureDetector(
-                            onTap: () => setState(() => _imgIdx = i),
+                            onTap: () => _pageController.animateToPage(
+                              i,
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOut,
+                            ),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -383,9 +426,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: p.isSoldOut ? null : () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    disabledBackgroundColor:
+                    AppColors.primary.withValues(alpha: 0.38),
                     foregroundColor: AppColors.primaryForeground,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -393,9 +438,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Buy Now',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  child: Text(
+                    p.isSoldOut ? 'Sold Out' : 'Buy Now',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -408,7 +453,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                   final inCart =
                   ref.read(cartActionsProvider.notifier).contains(p.id);
                   return ElevatedButton(
-                    onPressed: inCart
+                    onPressed: (p.isSoldOut || inCart)
                         ? null
                         : () async {
                       await ref
@@ -440,7 +485,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                       elevation: 0,
                     ),
                     child: Text(
-                      inCart ? 'In Cart' : 'Add to Cart',
+                      inCart
+                          ? 'In Cart'
+                          : (p.isSoldOut ? 'Unavailable' : 'Add to Cart'),
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600),
                     ),
