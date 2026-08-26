@@ -1,0 +1,398 @@
+diff --git a/firestore.rules b/firestore.rules
+index d0e559a..2130dd1 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -35,6 +35,10 @@ service cloud.firestore {
+       allow read, write: if isOwner(userId);
+     }
+ 
++    match /wishlist/{userId}/items/{itemId} {
++      allow read, write: if isOwner(userId);
++    }
++
+     match /orders/{orderId} {
+       allow read: if isSignedIn() &&
+         (resource.data.buyerId == request.auth.uid ||
+diff --git a/lib/features/listings/presentation/screens/listing_detail_screen.dart b/lib/features/listings/presentation/screens/listing_detail_screen.dart
+index f0b254f..25714c0 100644
+--- a/lib/features/listings/presentation/screens/listing_detail_screen.dart
++++ b/lib/features/listings/presentation/screens/listing_detail_screen.dart
+@@ -7,6 +7,7 @@ import '../../../../shared/widgets/condition_badge.dart';
+ import '../../../../shared/widgets/trust_score.dart';
+ import '../../../cart/data/cart_providers.dart';
+ import '../../../../shared/models/report_model.dart';
++import '../../../wishlist/data/wishlist_providers.dart';
+ import '../widgets/report_sheet.dart';
+ import 'package:go_router/go_router.dart';
+ 
+@@ -21,7 +22,6 @@ class ListingDetailScreen extends ConsumerStatefulWidget {
+ }
+ 
+ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
+-  bool _wish = false;
+   int _imgIdx = 0;
+   final PageController _pageController = PageController();
+ 
+@@ -66,11 +66,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
+                         onTap: () {},
+                       ),
+                       const SizedBox(width: 8),
+-                      _circleButton(
+-                        icon: _wish ? Icons.favorite : Icons.favorite_border,
+-                        color: _wish ? AppColors.accent : AppColors.textSecondary,
+-                        onTap: () => setState(() => _wish = !_wish),
+-                      ),
++                      Builder(builder: (context) {
++                        // Watch the stream so the heart updates live
++                        // once Firestore confirms the write.
++                        ref.watch(wishlistIdsStreamProvider);
++                        final wish = ref
++                            .read(wishlistActionsProvider.notifier)
++                            .contains(p.id);
++                        return _circleButton(
++                          icon: wish ? Icons.favorite : Icons.favorite_border,
++                          color: wish ? AppColors.accent : AppColors.textSecondary,
++                          onTap: () => ref
++                              .read(wishlistActionsProvider.notifier)
++                              .toggle(p.id),
++                        );
++                      }),
+                     ],
+                   ),
+                 ],
+diff --git a/lib/features/listings/presentation/screens/wishlist_screen.dart b/lib/features/listings/presentation/screens/wishlist_screen.dart
+index 8f1a97a..f7fe736 100644
+--- a/lib/features/listings/presentation/screens/wishlist_screen.dart
++++ b/lib/features/listings/presentation/screens/wishlist_screen.dart
+@@ -1,11 +1,114 @@
+ import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
+ import '../../../../core/theme/app_colors.dart';
++import '../../../auth/domain/auth_provider.dart';
++import '../../../wishlist/data/wishlist_providers.dart';
++import '../../../../shared/widgets/product_card.dart';
+ 
+-/// Empty-state Wishlist — populated once wishlist data (per-user,
+-/// backed by Firestore) is wired up after auth.
+-class WishlistScreen extends StatelessWidget {
++/// Saved items — real per-user Firestore wishlist. Tap the heart on
++/// any listing (Home/Explore grid or Listing Detail) to save it here.
++class WishlistScreen extends ConsumerWidget {
+   const WishlistScreen({super.key});
+ 
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final user = ref.watch(currentUserProvider);
++
++    if (user == null) {
++      return const _SignInPrompt();
++    }
++
++    // Watch the ids stream so the grid updates live as items are
++    // added/removed, and to distinguish "loading" from "empty".
++    final idsAsync = ref.watch(wishlistIdsStreamProvider);
++
++    return Scaffold(
++      backgroundColor: AppColors.background,
++      appBar: AppBar(
++        title: const Text('Saved Items'),
++        automaticallyImplyLeading: false,
++      ),
++      body: SafeArea(
++        child: idsAsync.when(
++          loading: () =>
++          const Center(child: CircularProgressIndicator()),
++          error: (e, _) => Center(
++            child: Text('Could not load your saved items.\n$e',
++                textAlign: TextAlign.center,
++                style: const TextStyle(
++                    fontSize: 12, color: AppColors.textTertiary)),
++          ),
++          data: (ids) {
++            if (ids.isEmpty) return const _EmptyState();
++            final products = ref.watch(wishlistProductsProvider);
++            return GridView.builder(
++              padding: const EdgeInsets.all(16),
++              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
++                crossAxisCount: 2,
++                crossAxisSpacing: 12,
++                mainAxisSpacing: 12,
++                childAspectRatio: 0.58,
++              ),
++              itemCount: products.length,
++              itemBuilder: (context, i) {
++                final p = products[i];
++                return ProductCard(
++                  product: p,
++                  onTap: () => context.push('/listing-detail', extra: p),
++                );
++              },
++            );
++          },
++        ),
++      ),
++    );
++  }
++}
++
++class _EmptyState extends StatelessWidget {
++  const _EmptyState();
++
++  @override
++  Widget build(BuildContext context) {
++    return Center(
++      child: Padding(
++        padding: const EdgeInsets.symmetric(horizontal: 32),
++        child: Column(
++          mainAxisSize: MainAxisSize.min,
++          children: [
++            Icon(Icons.favorite_border,
++                size: 52,
++                color: AppColors.textSecondary.withValues(alpha: 0.35)),
++            const SizedBox(height: 10),
++            const Text(
++              'Your wishlist is empty',
++              style: TextStyle(
++                fontSize: 16,
++                fontWeight: FontWeight.w600,
++                color: AppColors.textSecondary,
++              ),
++            ),
++            const SizedBox(height: 6),
++            const Text(
++              'Tap the heart on any listing to save items you love.',
++              textAlign: TextAlign.center,
++              style: TextStyle(
++                fontSize: 13,
++                color: AppColors.textTertiary,
++                height: 1.6,
++              ),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++}
++
++class _SignInPrompt extends StatelessWidget {
++  const _SignInPrompt();
++
+   @override
+   Widget build(BuildContext context) {
+     return Scaffold(
+@@ -22,7 +125,7 @@ class WishlistScreen extends StatelessWidget {
+                     color: AppColors.textSecondary.withValues(alpha: 0.35)),
+                 const SizedBox(height: 10),
+                 const Text(
+-                  'Your wishlist is empty',
++                  'Sign in to save items',
+                   style: TextStyle(
+                     fontSize: 16,
+                     fontWeight: FontWeight.w600,
+@@ -31,7 +134,7 @@ class WishlistScreen extends StatelessWidget {
+                 ),
+                 const SizedBox(height: 6),
+                 const Text(
+-                  'Tap the heart on any listing to save items you love.',
++                  'Your wishlist is saved to your account across devices.',
+                   textAlign: TextAlign.center,
+                   style: TextStyle(
+                     fontSize: 13,
+@@ -39,6 +142,22 @@ class WishlistScreen extends StatelessWidget {
+                     height: 1.6,
+                   ),
+                 ),
++                const SizedBox(height: 16),
++                ElevatedButton(
++                  onPressed: () => context.push('/login'),
++                  style: ElevatedButton.styleFrom(
++                    backgroundColor: AppColors.primary,
++                    foregroundColor: AppColors.primaryForeground,
++                    padding: const EdgeInsets.symmetric(
++                        horizontal: 24, vertical: 12),
++                    shape: RoundedRectangleBorder(
++                        borderRadius: BorderRadius.circular(14)),
++                    elevation: 0,
++                  ),
++                  child: const Text('Sign In',
++                      style: TextStyle(
++                          fontSize: 13, fontWeight: FontWeight.w600)),
++                ),
+               ],
+             ),
+           ),
+@@ -46,4 +165,4 @@ class WishlistScreen extends StatelessWidget {
+       ),
+     );
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/lib/features/wishlist/data/wishlist_providers.dart b/lib/features/wishlist/data/wishlist_providers.dart
+new file mode 100644
+index 0000000..5b116bb
+--- /dev/null
++++ b/lib/features/wishlist/data/wishlist_providers.dart
+@@ -0,0 +1,52 @@
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import '../../../shared/models/product_model.dart';
++import '../../auth/domain/auth_provider.dart';
++import '../../listings/domain/listings_provider.dart';
++import 'wishlist_repository.dart';
++
++final wishlistRepositoryProvider =
++Provider<WishlistRepository>((ref) => WishlistRepository());
++
++/// Set of saved listing ids for the signed-in user. Empty when signed out.
++final wishlistIdsStreamProvider = StreamProvider<Set<String>>((ref) {
++  final user = ref.watch(currentUserProvider);
++  if (user == null) return Stream.value(const <String>{});
++  return ref.watch(wishlistRepositoryProvider).watchWishlistIds(user.uid);
++});
++
++/// The signed-in user's saved products — combines the wishlist id set
++/// with the live listings stream so cards always show current price,
++/// photos, and sold-out state (not a stale snapshot from when saved).
++final wishlistProductsProvider = Provider<List<Product>>((ref) {
++  final ids = ref.watch(wishlistIdsStreamProvider).asData?.value ?? const {};
++  if (ids.isEmpty) return const [];
++  final listings = ref.watch(listingsStreamProvider).asData?.value ?? const [];
++  return listings.where((p) => ids.contains(p.id)).toList();
++});
++
++final wishlistCountProvider =
++Provider<int>((ref) => ref.watch(wishlistProductsProvider).length);
++
++class WishlistActions extends Notifier<void> {
++  @override
++  void build() {}
++
++  bool contains(String listingId) {
++    final ids = ref.read(wishlistIdsStreamProvider).asData?.value ?? const {};
++    return ids.contains(listingId);
++  }
++
++  Future<void> toggle(String listingId) async {
++    final user = ref.read(currentUserProvider);
++    if (user == null) return;
++    final repo = ref.read(wishlistRepositoryProvider);
++    if (contains(listingId)) {
++      await repo.remove(user.uid, listingId);
++    } else {
++      await repo.add(user.uid, listingId);
++    }
++  }
++}
++
++final wishlistActionsProvider =
++NotifierProvider<WishlistActions, void>(WishlistActions.new);
+diff --git a/lib/features/wishlist/data/wishlist_repository.dart b/lib/features/wishlist/data/wishlist_repository.dart
+new file mode 100644
+index 0000000..9461adc
+--- /dev/null
++++ b/lib/features/wishlist/data/wishlist_repository.dart
+@@ -0,0 +1,30 @@
++import 'package:cloud_firestore/cloud_firestore.dart';
++
++/// Firestore CRUD for a user's wishlist at wishlist/{uid}/items/{listingId}.
++/// Docs just mark presence (doc id = listingId) — the actual product
++/// data (name, price, photos...) is looked up live from the listings
++/// collection so the wishlist always reflects the current listing
++/// state (price changes, sold-out, edits) rather than a stale snapshot.
++class WishlistRepository {
++  final FirebaseFirestore _db = FirebaseFirestore.instance;
++
++  CollectionReference<Map<String, dynamic>> _items(String uid) =>
++      _db.collection('wishlist').doc(uid).collection('items');
++
++  /// Live stream of the signed-in user's saved listing ids.
++  Stream<Set<String>> watchWishlistIds(String uid) {
++    return _items(uid)
++        .snapshots()
++        .map((snap) => snap.docs.map((d) => d.id).toSet());
++  }
++
++  Future<void> add(String uid, String listingId) {
++    return _items(uid)
++        .doc(listingId)
++        .set({'savedAt': FieldValue.serverTimestamp()});
++  }
++
++  Future<void> remove(String uid, String listingId) {
++    return _items(uid).doc(listingId).delete();
++  }
++}
+diff --git a/lib/shared/widgets/product_card.dart b/lib/shared/widgets/product_card.dart
+index f00d46c..09eb72d 100644
+--- a/lib/shared/widgets/product_card.dart
++++ b/lib/shared/widgets/product_card.dart
+@@ -1,7 +1,9 @@
+ import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:cached_network_image/cached_network_image.dart';
+ import '../../core/theme/app_colors.dart';
+ import '../../core/theme/app_radius.dart';
++import '../../features/wishlist/data/wishlist_providers.dart';
+ import '../models/product_model.dart';
+ import 'condition_badge.dart';
+ import 'trust_score.dart';
+@@ -9,25 +11,22 @@ import 'trust_score.dart';
+ /// The core discovery component — used in Home grid, Explore results,
+ /// wishlist, etc. At a glance shows: image, condition, name, price,
+ /// seller trust score.
+-class ProductCard extends StatefulWidget {
++class ProductCard extends ConsumerWidget {
+   final Product product;
+   final VoidCallback onTap;
+ 
+   const ProductCard({super.key, required this.product, required this.onTap});
+ 
+   @override
+-  State<ProductCard> createState() => _ProductCardState();
+-}
+-
+-class _ProductCardState extends State<ProductCard> {
+-  bool _wishlisted = false;
+-
+-  @override
+-  Widget build(BuildContext context) {
+-    final p = widget.product;
++  Widget build(BuildContext context, WidgetRef ref) {
++    final p = product;
++    // Watch the stream so the heart updates live once Firestore confirms
++    // the write (and reflects wishlist changes made elsewhere too).
++    ref.watch(wishlistIdsStreamProvider);
++    final wishlisted = ref.read(wishlistActionsProvider.notifier).contains(p.id);
+ 
+     return GestureDetector(
+-      onTap: widget.onTap,
++      onTap: onTap,
+       child: Container(
+         decoration: BoxDecoration(
+           color: AppColors.surface,
+@@ -95,7 +94,8 @@ class _ProductCardState extends State<ProductCard> {
+                     top: 8,
+                     right: 8,
+                     child: GestureDetector(
+-                      onTap: () => setState(() => _wishlisted = !_wishlisted),
++                      onTap: () =>
++                          ref.read(wishlistActionsProvider.notifier).toggle(p.id),
+                       child: Container(
+                         width: 28,
+                         height: 28,
+@@ -104,11 +104,9 @@ class _ProductCardState extends State<ProductCard> {
+                           shape: BoxShape.circle,
+                         ),
+                         child: Icon(
+-                          _wishlisted
+-                              ? Icons.favorite
+-                              : Icons.favorite_border,
++                          wishlisted ? Icons.favorite : Icons.favorite_border,
+                           size: 14,
+-                          color: _wishlisted
++                          color: wishlisted
+                               ? AppColors.accent
+                               : AppColors.textTertiary,
+                         ),

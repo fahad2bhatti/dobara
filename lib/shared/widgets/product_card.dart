@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
+import '../../features/wishlist/data/wishlist_providers.dart';
 import '../models/product_model.dart';
 import 'condition_badge.dart';
 import 'trust_score.dart';
@@ -9,25 +11,22 @@ import 'trust_score.dart';
 /// The core discovery component — used in Home grid, Explore results,
 /// wishlist, etc. At a glance shows: image, condition, name, price,
 /// seller trust score.
-class ProductCard extends StatefulWidget {
+class ProductCard extends ConsumerWidget {
   final Product product;
   final VoidCallback onTap;
 
   const ProductCard({super.key, required this.product, required this.onTap});
 
   @override
-  State<ProductCard> createState() => _ProductCardState();
-}
-
-class _ProductCardState extends State<ProductCard> {
-  bool _wishlisted = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = widget.product;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = product;
+    // Watch the stream so the heart updates live once Firestore confirms
+    // the write (and reflects wishlist changes made elsewhere too).
+    ref.watch(wishlistIdsStreamProvider);
+    final wishlisted = ref.read(wishlistActionsProvider.notifier).contains(p.id);
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -95,7 +94,8 @@ class _ProductCardState extends State<ProductCard> {
                     top: 8,
                     right: 8,
                     child: GestureDetector(
-                      onTap: () => setState(() => _wishlisted = !_wishlisted),
+                      onTap: () =>
+                          ref.read(wishlistActionsProvider.notifier).toggle(p.id),
                       child: Container(
                         width: 28,
                         height: 28,
@@ -104,11 +104,9 @@ class _ProductCardState extends State<ProductCard> {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          _wishlisted
-                              ? Icons.favorite
-                              : Icons.favorite_border,
+                          wishlisted ? Icons.favorite : Icons.favorite_border,
                           size: 14,
-                          color: _wishlisted
+                          color: wishlisted
                               ? AppColors.accent
                               : AppColors.textTertiary,
                         ),

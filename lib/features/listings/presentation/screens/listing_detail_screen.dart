@@ -7,6 +7,7 @@ import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
 import '../../../cart/data/cart_providers.dart';
 import '../../../../shared/models/report_model.dart';
+import '../../../wishlist/data/wishlist_providers.dart';
 import '../widgets/report_sheet.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,7 +22,6 @@ class ListingDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
-  bool _wish = false;
   int _imgIdx = 0;
   final PageController _pageController = PageController();
 
@@ -66,11 +66,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                         onTap: () {},
                       ),
                       const SizedBox(width: 8),
-                      _circleButton(
-                        icon: _wish ? Icons.favorite : Icons.favorite_border,
-                        color: _wish ? AppColors.accent : AppColors.textSecondary,
-                        onTap: () => setState(() => _wish = !_wish),
-                      ),
+                      Builder(builder: (context) {
+                        // Watch the stream so the heart updates live
+                        // once Firestore confirms the write.
+                        ref.watch(wishlistIdsStreamProvider);
+                        final wish = ref
+                            .read(wishlistActionsProvider.notifier)
+                            .contains(p.id);
+                        return _circleButton(
+                          icon: wish ? Icons.favorite : Icons.favorite_border,
+                          color: wish ? AppColors.accent : AppColors.textSecondary,
+                          onTap: () => ref
+                              .read(wishlistActionsProvider.notifier)
+                              .toggle(p.id),
+                        );
+                      }),
                     ],
                   ),
                 ],
@@ -202,26 +212,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                   ),
                                 ),
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Rs. ${_formatPrice(p.price)}',
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    p.city,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textTertiary,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                'Rs. ${_formatPrice(p.price)}',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ],
                           ),
@@ -317,7 +314,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        '${p.seller.completedSales} completed sales · ${p.city}',
+                                        '${p.seller.completedSales} completed sales',
                                         style: const TextStyle(
                                           fontSize: 11,
                                           color: AppColors.textTertiary,
@@ -357,7 +354,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                           Wrap(
                             spacing: 6,
                             runSpacing: 6,
-                            children: [p.category, p.brand, p.city]
+                            children: [p.category, p.brand]
                                 .map(
                                   (tag) => Container(
                                 padding: const EdgeInsets.symmetric(
