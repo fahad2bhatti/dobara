@@ -16,7 +16,7 @@ class AdminDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ordersAsync = ref.watch(ordersStreamProvider);
+    final ordersAsync = ref.watch(adminOrdersStreamProvider);
     final reports = ref.watch(reportsProvider);
     final usersAsync = ref.watch(usersStreamProvider);
     final listingsAsync = ref.watch(listingsStreamProvider);
@@ -84,6 +84,15 @@ class AdminDashboardScreen extends ConsumerWidget {
                 label: 'Listings',
                 trailing: '${listingsAsync.asData?.value.length ?? 0}',
                 onTap: () => context.push('/admin/listings'),
+              ),
+
+              const SizedBox(height: 8),
+              _menuRow(
+                context,
+                icon: Icons.receipt_long_outlined,
+                label: 'Orders',
+                trailing: '${ordersAsync.asData?.value.length ?? 0}',
+                onTap: () => context.push('/admin/orders'),
               ),
 
               const SizedBox(height: 8),                          // ADD

@@ -1,0 +1,1143 @@
+diff --git a/firestore.rules b/firestore.rules
+index 2130dd1..6cd8a82 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -39,6 +39,11 @@ service cloud.firestore {
+       allow read, write: if isOwner(userId);
+     }
+ 
++    match /notifications/{userId}/items/{itemId} {
++      allow read, update, delete: if isOwner(userId);
++      allow create: if isAdmin();
++    }
++
+     match /orders/{orderId} {
+       allow read: if isSignedIn() &&
+         (resource.data.buyerId == request.auth.uid ||
+diff --git a/lib/core/router/app_router.dart b/lib/core/router/app_router.dart
+index 9134030..f6fcec3 100644
+--- a/lib/core/router/app_router.dart
++++ b/lib/core/router/app_router.dart
+@@ -18,6 +18,7 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
+ import '../../features/cart/presentation/screens/cart_screen.dart';
+ import '../../features/checkout/presentation/screens/checkout_screen.dart';
+ import '../../features/orders/presentation/screens/order_history_screen.dart';
++import '../../features/notifications/presentation/screens/notifications_screen.dart';
+ import '../../features/orders/presentation/screens/order_detail_screen.dart';
+ import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
+ import '../../features/admin/presentation/screens/listings_moderation_screen.dart';
+@@ -26,6 +27,8 @@ import '../../shared/models/product_model.dart';
+ import '../../shared/models/order_model.dart';
+ import 'app_shell_scaffold.dart';
+ import '../../features/admin/presentation/screens/users_list_screen.dart';
++import '../../features/admin/presentation/screens/admin_orders_screen.dart';
++import '../../features/admin/presentation/screens/admin_order_update_screen.dart';
+ 
+ /// Routes that require a signed-in user. Home, Explore, and Wishlist
+ /// stay open to guest browsing per product decision.
+@@ -157,6 +160,11 @@ final routerProvider = Provider<GoRouter>((ref) {
+         ],
+       ),
+ 
++      GoRoute(
++        path: '/notifications',
++        builder: (context, state) => const NotificationsScreen(),
++      ),
++
+       // TODO Phase 10.5: also check isAdminProvider in redirect once
+       // Admin role-gating is tackled, not just signed-in status.
+       GoRoute(
+@@ -175,6 +183,19 @@ final routerProvider = Provider<GoRouter>((ref) {
+             path: 'users',                                            // ADD
+             builder: (context, state) => const UsersListScreen(),      // ADD
+           ),
++          GoRoute(
++            path: 'orders',
++            builder: (context, state) => const AdminOrdersScreen(),
++            routes: [
++              GoRoute(
++                path: 'update', // -> /admin/orders/update, extra: order
++                builder: (context, state) {
++                  final order = state.extra as Order;
++                  return AdminOrderUpdateScreen(order: order);
++                },
++              ),
++            ],
++          ),
+         ],
+       ),
+ 
+diff --git a/lib/features/admin/presentation/screens/admin_dashboard_screen.dart b/lib/features/admin/presentation/screens/admin_dashboard_screen.dart
+index ac4bf06..37ace17 100644
+--- a/lib/features/admin/presentation/screens/admin_dashboard_screen.dart
++++ b/lib/features/admin/presentation/screens/admin_dashboard_screen.dart
+@@ -16,7 +16,7 @@ class AdminDashboardScreen extends ConsumerWidget {
+ 
+   @override
+   Widget build(BuildContext context, WidgetRef ref) {
+-    final ordersAsync = ref.watch(ordersStreamProvider);
++    final ordersAsync = ref.watch(adminOrdersStreamProvider);
+     final reports = ref.watch(reportsProvider);
+     final usersAsync = ref.watch(usersStreamProvider);
+     final listingsAsync = ref.watch(listingsStreamProvider);
+@@ -86,6 +86,15 @@ class AdminDashboardScreen extends ConsumerWidget {
+                 onTap: () => context.push('/admin/listings'),
+               ),
+ 
++              const SizedBox(height: 8),
++              _menuRow(
++                context,
++                icon: Icons.receipt_long_outlined,
++                label: 'Orders',
++                trailing: '${ordersAsync.asData?.value.length ?? 0}',
++                onTap: () => context.push('/admin/orders'),
++              ),
++
+               const SizedBox(height: 8),                          // ADD
+               _menuRow(                                            // ADD
+                 context,                                            // ADD
+diff --git a/lib/features/admin/presentation/screens/admin_order_update_screen.dart b/lib/features/admin/presentation/screens/admin_order_update_screen.dart
+new file mode 100644
+index 0000000..0f346fd
+--- /dev/null
++++ b/lib/features/admin/presentation/screens/admin_order_update_screen.dart
+@@ -0,0 +1,227 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
++import '../../../../core/theme/app_colors.dart';
++import '../../../../shared/models/order_model.dart';
++import '../../../orders/domain/orders_provider.dart';
++
++/// Admin-only. Updates an order's status, tracking number, and courier
++/// in one action — the buyer gets a notification the moment this saves
++/// (see OrdersActions.adminUpdateOrder), so this is the single place
++/// that drives the buyer's whole delivery-status experience.
++class AdminOrderUpdateScreen extends ConsumerStatefulWidget {
++  final Order order;
++
++  const AdminOrderUpdateScreen({super.key, required this.order});
++
++  @override
++  ConsumerState<AdminOrderUpdateScreen> createState() =>
++      _AdminOrderUpdateScreenState();
++}
++
++class _AdminOrderUpdateScreenState
++    extends ConsumerState<AdminOrderUpdateScreen> {
++  late OrderStatus _status;
++  late final TextEditingController _trackingController;
++  late final TextEditingController _courierController;
++  bool _saving = false;
++
++  @override
++  void initState() {
++    super.initState();
++    _status = widget.order.status;
++    _trackingController =
++        TextEditingController(text: widget.order.trackingNumber ?? '');
++    _courierController =
++        TextEditingController(text: widget.order.courierName ?? '');
++  }
++
++  @override
++  void dispose() {
++    _trackingController.dispose();
++    _courierController.dispose();
++    super.dispose();
++  }
++
++  Future<void> _save() async {
++    setState(() => _saving = true);
++    try {
++      await ref.read(ordersActionsProvider.notifier).adminUpdateOrder(
++        widget.order,
++        _status,
++        trackingNumber: _trackingController.text.trim().isEmpty
++            ? null
++            : _trackingController.text.trim(),
++        courierName: _courierController.text.trim().isEmpty
++            ? null
++            : _courierController.text.trim(),
++      );
++      if (!mounted) return;
++      context.pop();
++      ScaffoldMessenger.of(context).showSnackBar(
++        const SnackBar(
++            content: Text('Order updated — buyer has been notified.')),
++      );
++    } catch (e) {
++      if (!mounted) return;
++      setState(() => _saving = false);
++      ScaffoldMessenger.of(context).showSnackBar(
++        SnackBar(content: Text('Could not update order: $e')),
++      );
++    }
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    final order = widget.order;
++    final shortId =
++    order.id.length >= 6 ? order.id.substring(order.id.length - 6) : order.id;
++
++    return Scaffold(
++      backgroundColor: AppColors.background,
++      appBar: AppBar(title: Text('Order #$shortId')),
++      body: SafeArea(
++        child: SingleChildScrollView(
++          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
++          child: Column(
++            crossAxisAlignment: CrossAxisAlignment.start,
++            children: [
++              Text(order.customerName,
++                  style: const TextStyle(
++                      fontSize: 14,
++                      fontWeight: FontWeight.w600,
++                      color: AppColors.textPrimary)),
++              const SizedBox(height: 2),
++              Text('${order.phone} · ${order.address}, ${order.city}',
++                  style: const TextStyle(
++                      fontSize: 12,
++                      color: AppColors.textTertiary,
++                      height: 1.4)),
++              const SizedBox(height: 20),
++
++              const Text('STATUS',
++                  style: TextStyle(
++                      fontSize: 10,
++                      fontWeight: FontWeight.w700,
++                      letterSpacing: 1.4,
++                      color: AppColors.textTertiary)),
++              const SizedBox(height: 8),
++              Wrap(
++                spacing: 8,
++                runSpacing: 8,
++                children: OrderStatus.values.map((s) {
++                  final selected = s == _status;
++                  return GestureDetector(
++                    onTap: () => setState(() => _status = s),
++                    child: Container(
++                      padding: const EdgeInsets.symmetric(
++                          horizontal: 14, vertical: 8),
++                      decoration: BoxDecoration(
++                        color: selected ? AppColors.primary : AppColors.surface,
++                        borderRadius: BorderRadius.circular(999),
++                        border: Border.all(
++                          color: selected ? AppColors.primary : AppColors.border,
++                          width: 1.5,
++                        ),
++                      ),
++                      child: Text(
++                        s.label,
++                        style: TextStyle(
++                          fontSize: 12,
++                          fontWeight: FontWeight.w600,
++                          color: selected
++                              ? AppColors.primaryForeground
++                              : AppColors.textSecondary,
++                        ),
++                      ),
++                    ),
++                  );
++                }).toList(),
++              ),
++              const SizedBox(height: 20),
++
++              const Text('COURIER',
++                  style: TextStyle(
++                      fontSize: 10,
++                      fontWeight: FontWeight.w700,
++                      letterSpacing: 1.4,
++                      color: AppColors.textTertiary)),
++              const SizedBox(height: 8),
++              TextField(
++                controller: _courierController,
++                decoration: _dec('e.g. TCS, Leopards, M&P'),
++              ),
++              const SizedBox(height: 16),
++
++              const Text('TRACKING NUMBER',
++                  style: TextStyle(
++                      fontSize: 10,
++                      fontWeight: FontWeight.w700,
++                      letterSpacing: 1.4,
++                      color: AppColors.textTertiary)),
++              const SizedBox(height: 8),
++              TextField(
++                controller: _trackingController,
++                decoration: _dec('e.g. TCS123456789'),
++              ),
++              const SizedBox(height: 8),
++              const Text(
++                'Saving sends the buyer a notification with the new status and this tracking info.',
++                style: TextStyle(
++                    fontSize: 11,
++                    color: AppColors.textTertiary,
++                    height: 1.5),
++              ),
++              const SizedBox(height: 22),
++
++              SizedBox(
++                width: double.infinity,
++                child: ElevatedButton(
++                  onPressed: _saving ? null : _save,
++                  style: ElevatedButton.styleFrom(
++                    backgroundColor: AppColors.primary,
++                    foregroundColor: AppColors.primaryForeground,
++                    padding: const EdgeInsets.symmetric(vertical: 14),
++                    shape: RoundedRectangleBorder(
++                        borderRadius: BorderRadius.circular(16)),
++                    elevation: 0,
++                  ),
++                  child: _saving
++                      ? const SizedBox(
++                    width: 18,
++                    height: 18,
++                    child: CircularProgressIndicator(
++                        strokeWidth: 2, color: Colors.white),
++                  )
++                      : const Text('Save & Notify Buyer',
++                      style: TextStyle(
++                          fontSize: 14, fontWeight: FontWeight.w600)),
++                ),
++              ),
++            ],
++          ),
++        ),
++      ),
++    );
++  }
++
++  InputDecoration _dec(String hint) => InputDecoration(
++    hintText: hint,
++    hintStyle: const TextStyle(fontSize: 13, color: AppColors.textPlaceholder),
++    filled: true,
++    fillColor: AppColors.surface,
++    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
++    border: OutlineInputBorder(
++      borderRadius: BorderRadius.circular(12),
++      borderSide: const BorderSide(color: AppColors.border, width: 1.5),
++    ),
++    enabledBorder: OutlineInputBorder(
++      borderRadius: BorderRadius.circular(12),
++      borderSide: const BorderSide(color: AppColors.border, width: 1.5),
++    ),
++    focusedBorder: OutlineInputBorder(
++      borderRadius: BorderRadius.circular(12),
++      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
++    ),
++  );
++}
+diff --git a/lib/features/admin/presentation/screens/admin_orders_screen.dart b/lib/features/admin/presentation/screens/admin_orders_screen.dart
+new file mode 100644
+index 0000000..9bd0ae5
+--- /dev/null
++++ b/lib/features/admin/presentation/screens/admin_orders_screen.dart
+@@ -0,0 +1,133 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
++import '../../../../core/theme/app_colors.dart';
++import '../../../../shared/models/order_model.dart';
++import '../../../orders/domain/orders_provider.dart';
++
++class AdminOrdersScreen extends ConsumerWidget {
++  const AdminOrdersScreen({super.key});
++
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final ordersAsync = ref.watch(adminOrdersStreamProvider);
++
++    return Scaffold(
++      backgroundColor: AppColors.background,
++      appBar: AppBar(title: const Text('Orders')),
++      body: SafeArea(
++        child: ordersAsync.when(
++          data: (orders) => orders.isEmpty
++              ? const Center(child: Text('No orders yet.'))
++              : ListView.separated(
++            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
++            itemCount: orders.length,
++            separatorBuilder: (_, _) => const SizedBox(height: 10),
++            itemBuilder: (context, i) =>
++                _orderTile(context, orders[i]),
++          ),
++          loading: () => const Center(child: CircularProgressIndicator()),
++          error: (e, _) => Center(child: Text('Could not load orders: $e')),
++        ),
++      ),
++    );
++  }
++
++  Widget _orderTile(BuildContext context, Order order) {
++    final shortId = order.id.length >= 6
++        ? order.id.substring(order.id.length - 6)
++        : order.id;
++
++    return GestureDetector(
++      onTap: () => context.push('/admin/orders/update', extra: order),
++      child: Container(
++        padding: const EdgeInsets.all(14),
++        decoration: BoxDecoration(
++          color: AppColors.surface,
++          borderRadius: BorderRadius.circular(16),
++          boxShadow: [
++            BoxShadow(
++              color: AppColors.primary.withValues(alpha: 0.06),
++              blurRadius: 5,
++              offset: const Offset(0, 1),
++            ),
++          ],
++        ),
++        child: Row(
++          children: [
++            Expanded(
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
++                children: [
++                  Row(
++                    children: [
++                      Text('#$shortId',
++                          style: const TextStyle(
++                              fontSize: 13,
++                              fontWeight: FontWeight.w700,
++                              color: AppColors.textPrimary)),
++                      const SizedBox(width: 8),
++                      _statusChip(order.status),
++                    ],
++                  ),
++                  const SizedBox(height: 4),
++                  Text(order.customerName,
++                      style: const TextStyle(
++                          fontSize: 12, color: AppColors.textSecondary)),
++                  const SizedBox(height: 2),
++                  Text(
++                    '${order.items.length} item${order.items.length == 1 ? '' : 's'} · Rs. ${_formatPrice(order.total)}',
++                    style: const TextStyle(
++                        fontSize: 11, color: AppColors.textTertiary),
++                  ),
++                  if (order.trackingNumber != null) ...[
++                    const SizedBox(height: 2),
++                    Text('Tracking: ${order.trackingNumber}',
++                        style: const TextStyle(
++                            fontSize: 11, color: AppColors.textTertiary)),
++                  ],
++                ],
++              ),
++            ),
++            const Icon(Icons.chevron_right,
++                size: 18, color: AppColors.neutral200),
++          ],
++        ),
++      ),
++    );
++  }
++
++  Widget _statusChip(OrderStatus status) {
++    final isCancelled = status == OrderStatus.cancelled;
++    final isDelivered = status == OrderStatus.delivered;
++    final bg = isCancelled
++        ? AppColors.errorBg
++        : isDelivered
++        ? AppColors.successBg
++        : AppColors.muted;
++    final fg = isCancelled
++        ? AppColors.errorText
++        : isDelivered
++        ? AppColors.successText
++        : AppColors.textSecondary;
++
++    return Container(
++      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
++      decoration:
++      BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
++      child: Text(status.label,
++          style: TextStyle(
++              fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
++    );
++  }
++
++  String _formatPrice(int price) {
++    final s = price.toString();
++    final buf = StringBuffer();
++    for (int i = 0; i < s.length; i++) {
++      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
++      buf.write(s[i]);
++    }
++    return buf.toString();
++  }
++}
+diff --git a/lib/features/home/presentation/screens/home_screen.dart b/lib/features/home/presentation/screens/home_screen.dart
+index d7e482b..d4cd5a6 100644
+--- a/lib/features/home/presentation/screens/home_screen.dart
++++ b/lib/features/home/presentation/screens/home_screen.dart
+@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
+ import '../../../../shared/models/product_model.dart';
+ import '../../../../shared/widgets/product_card.dart';
+ import '../../../cart/data/cart_providers.dart';
++import '../../../notifications/data/notifications_providers.dart';
+ import '../../../listings/domain/listings_provider.dart';
+ import 'package:go_router/go_router.dart';
+ 
+@@ -121,7 +122,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
+               ),
+               Row(
+                 children: [
+-                  _circleIconButton(Icons.notifications_outlined),
++                  Builder(builder: (context) {
++                    final unread = ref.watch(unreadNotificationsCountProvider);
++                    return GestureDetector(
++                      onTap: () => context.push('/notifications'),
++                      child: _circleIconButton(
++                        Icons.notifications_outlined,
++                        badgeCount: unread > 0 ? unread : null,
++                      ),
++                    );
++                  }),
+                   const SizedBox(width: 8),
+                   Builder(builder: (context) {
+                     final count = ref.watch(cartCountProvider);
+diff --git a/lib/features/notifications/data/notifications_providers.dart b/lib/features/notifications/data/notifications_providers.dart
+new file mode 100644
+index 0000000..c148e2e
+--- /dev/null
++++ b/lib/features/notifications/data/notifications_providers.dart
+@@ -0,0 +1,44 @@
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import '../../../shared/models/notification_model.dart';
++import '../../auth/domain/auth_provider.dart';
++import 'notifications_repository.dart';
++
++final notificationsRepositoryProvider =
++Provider<NotificationsRepository>((ref) => NotificationsRepository());
++
++/// Live notification feed for the signed-in user. Empty when signed out.
++final notificationsStreamProvider =
++StreamProvider<List<AppNotification>>((ref) {
++  final user = ref.watch(currentUserProvider);
++  if (user == null) return Stream.value(const []);
++  return ref
++      .watch(notificationsRepositoryProvider)
++      .watchNotifications(user.uid);
++});
++
++final unreadNotificationsCountProvider = Provider<int>((ref) {
++  final items = ref.watch(notificationsStreamProvider).asData?.value ?? const [];
++  return items.where((n) => !n.read).length;
++});
++
++class NotificationsActions extends Notifier<void> {
++  @override
++  void build() {}
++
++  Future<void> markRead(String notificationId) async {
++    final user = ref.read(currentUserProvider);
++    if (user == null) return;
++    await ref
++        .read(notificationsRepositoryProvider)
++        .markRead(user.uid, notificationId);
++  }
++
++  Future<void> markAllRead() async {
++    final user = ref.read(currentUserProvider);
++    if (user == null) return;
++    await ref.read(notificationsRepositoryProvider).markAllRead(user.uid);
++  }
++}
++
++final notificationsActionsProvider =
++NotifierProvider<NotificationsActions, void>(NotificationsActions.new);
+diff --git a/lib/features/notifications/data/notifications_repository.dart b/lib/features/notifications/data/notifications_repository.dart
+new file mode 100644
+index 0000000..cc72039
+--- /dev/null
++++ b/lib/features/notifications/data/notifications_repository.dart
+@@ -0,0 +1,39 @@
++import 'package:cloud_firestore/cloud_firestore.dart';
++import '../../../shared/models/notification_model.dart';
++
++/// Firestore CRUD for a user's notification feed at
++/// notifications/{uid}/items/{itemId}.
++class NotificationsRepository {
++  final FirebaseFirestore _db = FirebaseFirestore.instance;
++
++  CollectionReference<Map<String, dynamic>> _items(String uid) =>
++      _db.collection('notifications').doc(uid).collection('items');
++
++  Stream<List<AppNotification>> watchNotifications(String uid) {
++    return _items(uid)
++        .orderBy('createdAt', descending: true)
++        .snapshots()
++        .map((snap) =>
++        snap.docs.map((d) => AppNotification.fromDoc(d)).toList());
++  }
++
++  /// Called by the admin flow when an order's status changes — writes
++  /// straight into the *buyer's* subcollection (allowed by rules for
++  /// admins), not the caller's own.
++  Future<void> notify(String buyerUid, AppNotification notification) {
++    return _items(buyerUid).add(notification.toMap());
++  }
++
++  Future<void> markRead(String uid, String notificationId) {
++    return _items(uid).doc(notificationId).update({'read': true});
++  }
++
++  Future<void> markAllRead(String uid) async {
++    final snap = await _items(uid).where('read', isEqualTo: false).get();
++    final batch = _db.batch();
++    for (final doc in snap.docs) {
++      batch.update(doc.reference, {'read': true});
++    }
++    await batch.commit();
++  }
++}
+diff --git a/lib/features/notifications/presentation/screens/notifications_screen.dart b/lib/features/notifications/presentation/screens/notifications_screen.dart
+new file mode 100644
+index 0000000..cd18382
+--- /dev/null
++++ b/lib/features/notifications/presentation/screens/notifications_screen.dart
+@@ -0,0 +1,202 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
++import '../../../../core/theme/app_colors.dart';
++import '../../../../shared/models/notification_model.dart';
++import '../../../../shared/models/order_model.dart';
++import '../../../auth/domain/auth_provider.dart';
++import '../../../orders/domain/orders_provider.dart';
++import '../../data/notifications_providers.dart';
++
++class NotificationsScreen extends ConsumerWidget {
++  const NotificationsScreen({super.key});
++
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final user = ref.watch(currentUserProvider);
++    final itemsAsync = ref.watch(notificationsStreamProvider);
++
++    return Scaffold(
++      backgroundColor: AppColors.background,
++      appBar: AppBar(
++        title: const Text('Notifications'),
++        actions: [
++          if (user != null)
++            TextButton(
++              onPressed: () =>
++                  ref.read(notificationsActionsProvider.notifier).markAllRead(),
++              child: const Text('Mark all read',
++                  style: TextStyle(fontSize: 12, color: AppColors.primary)),
++            ),
++        ],
++      ),
++      body: SafeArea(
++        child: user == null
++            ? _EmptyState(
++          icon: Icons.notifications_none,
++          title: 'Sign in to see updates',
++          subtitle: 'Order updates and alerts will show up here.',
++        )
++            : itemsAsync.when(
++          loading: () =>
++          const Center(child: CircularProgressIndicator()),
++          error: (e, _) => Center(
++            child: Text('Could not load notifications.\n$e',
++                textAlign: TextAlign.center,
++                style: const TextStyle(
++                    fontSize: 12, color: AppColors.textTertiary)),
++          ),
++          data: (items) {
++            if (items.isEmpty) {
++              return _EmptyState(
++                icon: Icons.notifications_none,
++                title: 'No notifications yet',
++                subtitle: "We'll let you know when there's an update on your orders.",
++              );
++            }
++            return ListView.separated(
++              padding: const EdgeInsets.all(16),
++              itemCount: items.length,
++              separatorBuilder: (_, _) => const SizedBox(height: 8),
++              itemBuilder: (context, i) {
++                final n = items[i];
++                return _NotificationTile(notification: n);
++              },
++            );
++          },
++        ),
++      ),
++    );
++  }
++}
++
++class _NotificationTile extends ConsumerWidget {
++  final AppNotification notification;
++
++  const _NotificationTile({required this.notification});
++
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final n = notification;
++    return GestureDetector(
++      onTap: () async {
++        if (!n.read) {
++          ref.read(notificationsActionsProvider.notifier).markRead(n.id);
++        }
++        if (n.orderId != null) {
++          final orders = ref.read(ordersStreamProvider).asData?.value ?? [];
++          Order? order;
++          for (final o in orders) {
++            if (o.id == n.orderId) {
++              order = o;
++              break;
++            }
++          }
++          if (order != null && context.mounted) {
++            context.push('/order-history/detail', extra: order);
++          }
++        }
++      },
++      child: Container(
++        padding: const EdgeInsets.all(14),
++        decoration: BoxDecoration(
++          color: n.read ? AppColors.surface : AppColors.muted,
++          borderRadius: BorderRadius.circular(14),
++          border: n.read
++              ? null
++              : Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
++        ),
++        child: Row(
++          crossAxisAlignment: CrossAxisAlignment.start,
++          children: [
++            if (!n.read)
++              Container(
++                width: 8,
++                height: 8,
++                margin: const EdgeInsets.only(top: 5, right: 10),
++                decoration: const BoxDecoration(
++                  color: AppColors.accent,
++                  shape: BoxShape.circle,
++                ),
++              )
++            else
++              const SizedBox(width: 18),
++            Expanded(
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
++                children: [
++                  Text(n.title,
++                      style: TextStyle(
++                          fontSize: 13,
++                          fontWeight:
++                          n.read ? FontWeight.w600 : FontWeight.w700,
++                          color: AppColors.textPrimary)),
++                  const SizedBox(height: 3),
++                  Text(n.body,
++                      style: const TextStyle(
++                          fontSize: 12,
++                          color: AppColors.textSecondary,
++                          height: 1.4)),
++                  const SizedBox(height: 6),
++                  Text(_relativeTime(n.createdAt),
++                      style: const TextStyle(
++                          fontSize: 10, color: AppColors.textTertiary)),
++                ],
++              ),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++
++  String _relativeTime(DateTime t) {
++    final diff = DateTime.now().difference(t);
++    if (diff.inMinutes < 1) return 'Just now';
++    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
++    if (diff.inHours < 24) return '${diff.inHours}h ago';
++    if (diff.inDays < 7) return '${diff.inDays}d ago';
++    return '${t.day}/${t.month}/${t.year}';
++  }
++}
++
++class _EmptyState extends StatelessWidget {
++  final IconData icon;
++  final String title;
++  final String subtitle;
++
++  const _EmptyState(
++      {required this.icon, required this.title, required this.subtitle});
++
++  @override
++  Widget build(BuildContext context) {
++    return Center(
++      child: Padding(
++        padding: const EdgeInsets.symmetric(horizontal: 32),
++        child: Column(
++          mainAxisSize: MainAxisSize.min,
++          children: [
++            Icon(icon,
++                size: 52,
++                color: AppColors.textSecondary.withValues(alpha: 0.35)),
++            const SizedBox(height: 10),
++            Text(title,
++                style: const TextStyle(
++                  fontSize: 16,
++                  fontWeight: FontWeight.w600,
++                  color: AppColors.textSecondary,
++                )),
++            const SizedBox(height: 6),
++            Text(subtitle,
++                textAlign: TextAlign.center,
++                style: const TextStyle(
++                  fontSize: 13,
++                  color: AppColors.textTertiary,
++                  height: 1.6,
++                )),
++          ],
++        ),
++      ),
++    );
++  }
++}
+diff --git a/lib/features/orders/data/orders_repository.dart b/lib/features/orders/data/orders_repository.dart
+index 65c80f8..6426871 100644
+--- a/lib/features/orders/data/orders_repository.dart
++++ b/lib/features/orders/data/orders_repository.dart
+@@ -16,12 +16,36 @@ class OrdersRepository {
+         .map((snap) => snap.docs.map((doc) => Order.fromDoc(doc)).toList());
+   }
+ 
++  /// All orders across all buyers, newest first — admin only (enforced
++  /// by Firestore rules; a non-admin caller would get permission-denied
++  /// on the first doc, not a filtered result).
++  Stream<List<Order>> watchAllOrders() {
++    return _orders
++        .orderBy('placedAt', descending: true)
++        .snapshots()
++        .map((snap) => snap.docs.map((doc) => Order.fromDoc(doc)).toList());
++  }
++
+   Future<String> placeOrder(Order order) async {
+     final doc = await _orders.add(order.toMap());
+     return doc.id;
+   }
+ 
+-  Future<void> updateStatus(String orderId, OrderStatus status) {
+-    return _orders.doc(orderId).update({'status': status.name});
++  /// Admin status update — status is required, tracking/courier are
++  /// optional (only meaningful once the order ships, but admin can set
++  /// them earlier too, e.g. to pre-fill before marking Shipped).
++  Future<void> updateStatus(
++      String orderId,
++      OrderStatus status, {
++        String? trackingNumber,
++        String? courierName,
++      }) {
++    final update = <String, dynamic>{
++      'status': status.name,
++      'statusUpdatedAt': FieldValue.serverTimestamp(),
++    };
++    if (trackingNumber != null) update['trackingNumber'] = trackingNumber;
++    if (courierName != null) update['courierName'] = courierName;
++    return _orders.doc(orderId).update(update);
+   }
+ }
+\ No newline at end of file
+diff --git a/lib/features/orders/domain/orders_provider.dart b/lib/features/orders/domain/orders_provider.dart
+index 5bd6221..278a4ff 100644
+--- a/lib/features/orders/domain/orders_provider.dart
++++ b/lib/features/orders/domain/orders_provider.dart
+@@ -1,6 +1,8 @@
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import '../../../shared/models/order_model.dart';
++import '../../../shared/models/notification_model.dart';
+ import '../../auth/domain/auth_provider.dart';
++import '../../notifications/data/notifications_providers.dart';
+ import '../data/orders_repository.dart';
+ 
+ final ordersRepositoryProvider =
+@@ -13,6 +15,11 @@ final ordersStreamProvider = StreamProvider<List<Order>>((ref) {
+   return ref.watch(ordersRepositoryProvider).watchOrders(user.uid);
+ });
+ 
++/// All orders, across every buyer — for the admin orders screen only.
++final adminOrdersStreamProvider = StreamProvider<List<Order>>((ref) {
++  return ref.watch(ordersRepositoryProvider).watchAllOrders();
++});
++
+ class OrdersActions extends Notifier<void> {
+   @override
+   void build() {}
+@@ -24,6 +31,47 @@ class OrdersActions extends Notifier<void> {
+   Future<void> updateStatus(String orderId, OrderStatus status) {
+     return ref.read(ordersRepositoryProvider).updateStatus(orderId, status);
+   }
++
++  /// Admin-only: updates status (+ optional tracking/courier) and drops
++  /// a notification into the buyer's feed in the same action, so the
++  /// buyer always finds out about every update — this is what makes
++  /// status changes feel real/"premium" rather than silent.
++  Future<void> adminUpdateOrder(
++      Order order,
++      OrderStatus newStatus, {
++        String? trackingNumber,
++        String? courierName,
++      }) async {
++    await ref.read(ordersRepositoryProvider).updateStatus(
++      order.id,
++      newStatus,
++      trackingNumber: trackingNumber,
++      courierName: courierName,
++    );
++
++    final shortId = order.id.length >= 6
++        ? order.id.substring(order.id.length - 6)
++        : order.id;
++    var body = 'Your order #$shortId is now ${newStatus.label}.';
++    final courier = courierName ?? order.courierName;
++    final tracking = trackingNumber ?? order.trackingNumber;
++    if (courier != null && tracking != null) {
++      body += ' Tracking: $tracking via $courier.';
++    } else if (tracking != null) {
++      body += ' Tracking: $tracking.';
++    }
++
++    await ref.read(notificationsRepositoryProvider).notify(
++      order.buyerId,
++      AppNotification(
++        id: '',
++        title: 'Order update',
++        body: body,
++        orderId: order.id,
++        createdAt: DateTime.now(),
++      ),
++    );
++  }
+ }
+ 
+ final ordersActionsProvider =
+diff --git a/lib/features/orders/presentation/screens/order_detail_screen.dart b/lib/features/orders/presentation/screens/order_detail_screen.dart
+index 02ec34c..cfdd007 100644
+--- a/lib/features/orders/presentation/screens/order_detail_screen.dart
++++ b/lib/features/orders/presentation/screens/order_detail_screen.dart
+@@ -6,7 +6,9 @@ import '../../../../shared/models/order_model.dart';
+ const List<OrderStatus> _kTrackableStatuses = [
+   OrderStatus.placed,
+   OrderStatus.confirmed,
++  OrderStatus.packed,
+   OrderStatus.shipped,
++  OrderStatus.outForDelivery,
+   OrderStatus.delivered,
+ ];
+ 
+@@ -112,7 +114,48 @@ class OrderDetailScreen extends StatelessWidget {
+                         color: AppColors.errorText),
+                   ),
+                 ),
+-              const SizedBox(height: 20),
++              const SizedBox(height: 16),
++
++              // ── Tracking info ─────────────────────────
++              if (order.trackingNumber != null || order.courierName != null)
++                Container(
++                  width: double.infinity,
++                  padding: const EdgeInsets.all(14),
++                  margin: const EdgeInsets.only(bottom: 4),
++                  decoration: BoxDecoration(
++                    color: AppColors.muted,
++                    borderRadius: BorderRadius.circular(14),
++                  ),
++                  child: Row(
++                    children: [
++                      const Icon(Icons.local_shipping_outlined,
++                          size: 18, color: AppColors.primary),
++                      const SizedBox(width: 10),
++                      Expanded(
++                        child: Column(
++                          crossAxisAlignment: CrossAxisAlignment.start,
++                          children: [
++                            if (order.courierName != null)
++                              Text(order.courierName!,
++                                  style: const TextStyle(
++                                      fontSize: 12,
++                                      fontWeight: FontWeight.w600,
++                                      color: AppColors.textPrimary)),
++                            if (order.trackingNumber != null)
++                              Text('Tracking: ${order.trackingNumber}',
++                                  style: const TextStyle(
++                                      fontSize: 11,
++                                      color: AppColors.textTertiary)),
++                          ],
++                        ),
++                      ),
++                    ],
++                  ),
++                )
++              else
++                const SizedBox.shrink(),
++
++              const SizedBox(height: 4),
+ 
+               // ── Items ────────────────────────────────
+               const Text('ITEMS',
+diff --git a/lib/features/orders/presentation/screens/order_history_screen.dart b/lib/features/orders/presentation/screens/order_history_screen.dart
+index 2bbe5aa..e48902a 100644
+--- a/lib/features/orders/presentation/screens/order_history_screen.dart
++++ b/lib/features/orders/presentation/screens/order_history_screen.dart
+@@ -167,7 +167,9 @@ class OrderHistoryScreen extends ConsumerWidget {
+       case OrderStatus.placed:
+         return (AppColors.warningBg, AppColors.warningText);
+       case OrderStatus.confirmed:
++      case OrderStatus.packed:
+       case OrderStatus.shipped:
++      case OrderStatus.outForDelivery:
+         return (const Color(0xFFD9EEFF), const Color(0xFF0B3A6E));
+       case OrderStatus.delivered:
+         return (AppColors.successBg, AppColors.successText);
+diff --git a/lib/shared/models/notification_model.dart b/lib/shared/models/notification_model.dart
+new file mode 100644
+index 0000000..bf8e5e5
+--- /dev/null
++++ b/lib/shared/models/notification_model.dart
+@@ -0,0 +1,46 @@
++import 'package:cloud_firestore/cloud_firestore.dart';
++
++/// In-app notification — currently used for order status updates.
++/// Stored per-user at notifications/{uid}/items/{id}. This is an
++/// in-app feed, not a push notification: real push (FCM) needs a
++/// server-side trigger (Cloud Functions), which requires the Blaze
++/// plan that hit a billing error earlier on this project. This gives
++/// the buyer a real, reliable "you have an update" signal without
++/// depending on that.
++class AppNotification {
++  final String id;
++  final String title;
++  final String body;
++  final String? orderId;
++  final DateTime createdAt;
++  final bool read;
++
++  const AppNotification({
++    required this.id,
++    required this.title,
++    required this.body,
++    this.orderId,
++    required this.createdAt,
++    this.read = false,
++  });
++
++  Map<String, dynamic> toMap() => {
++    'title': title,
++    'body': body,
++    'orderId': orderId,
++    'createdAt': FieldValue.serverTimestamp(),
++    'read': read,
++  };
++
++  factory AppNotification.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
++    final map = doc.data()!;
++    return AppNotification(
++      id: doc.id,
++      title: map['title'] ?? '',
++      body: map['body'] ?? '',
++      orderId: map['orderId'] as String?,
++      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
++      read: map['read'] ?? false,
++    );
++  }
++}
+diff --git a/lib/shared/models/order_model.dart b/lib/shared/models/order_model.dart
+index 60a4eef..cc31a63 100644
+--- a/lib/shared/models/order_model.dart
++++ b/lib/shared/models/order_model.dart
+@@ -4,7 +4,9 @@ import 'cart_model.dart';
+ enum OrderStatus {
+   placed('Order Placed'),
+   confirmed('Confirmed'),
++  packed('Packed'),
+   shipped('Shipped'),
++  outForDelivery('Out for Delivery'),
+   delivered('Delivered'),
+   cancelled('Cancelled');
+ 
+@@ -89,6 +91,9 @@ class Order {
+   final String city;
+   final OrderStatus status;
+   final DateTime placedAt;
++  final String? trackingNumber;
++  final String? courierName;
++  final DateTime? statusUpdatedAt;
+ 
+   const Order({
+     required this.id,
+@@ -103,22 +108,34 @@ class Order {
+     required this.city,
+     required this.status,
+     required this.placedAt,
++    this.trackingNumber,
++    this.courierName,
++    this.statusUpdatedAt,
+   });
+ 
+-  Order copyWith({OrderStatus? status}) => Order(
+-    id: id,
+-    buyerId: buyerId,
+-    items: items,
+-    subtotal: subtotal,
+-    deliveryFee: deliveryFee,
+-    total: total,
+-    customerName: customerName,
+-    phone: phone,
+-    address: address,
+-    city: city,
+-    status: status ?? this.status,
+-    placedAt: placedAt,
+-  );
++  Order copyWith({
++    OrderStatus? status,
++    String? trackingNumber,
++    String? courierName,
++    DateTime? statusUpdatedAt,
++  }) =>
++      Order(
++        id: id,
++        buyerId: buyerId,
++        items: items,
++        subtotal: subtotal,
++        deliveryFee: deliveryFee,
++        total: total,
++        customerName: customerName,
++        phone: phone,
++        address: address,
++        city: city,
++        status: status ?? this.status,
++        placedAt: placedAt,
++        trackingNumber: trackingNumber ?? this.trackingNumber,
++        courierName: courierName ?? this.courierName,
++        statusUpdatedAt: statusUpdatedAt ?? this.statusUpdatedAt,
++      );
+ 
+   /// sellerIds is denormalized alongside items so a future "seller order
+   /// list" screen can query orders with `array-contains` on a seller's uid
+@@ -136,6 +153,8 @@ class Order {
+     'city': city,
+     'status': status.name,
+     'placedAt': FieldValue.serverTimestamp(),
++    'trackingNumber': trackingNumber,
++    'courierName': courierName,
+   };
+ 
+   factory Order.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+@@ -158,6 +177,9 @@ class Order {
+       // (e.g. from cache before the server ack) may briefly have a null
+       // placedAt. Fall back to now so the UI never shows a broken date.
+       placedAt: (map['placedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
++      trackingNumber: map['trackingNumber'] as String?,
++      courierName: map['courierName'] as String?,
++      statusUpdatedAt: (map['statusUpdatedAt'] as Timestamp?)?.toDate(),
+     );
+   }
+ }
+\ No newline at end of file

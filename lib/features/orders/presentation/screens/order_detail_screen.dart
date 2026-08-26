@@ -6,7 +6,9 @@ import '../../../../shared/models/order_model.dart';
 const List<OrderStatus> _kTrackableStatuses = [
   OrderStatus.placed,
   OrderStatus.confirmed,
+  OrderStatus.packed,
   OrderStatus.shipped,
+  OrderStatus.outForDelivery,
   OrderStatus.delivered,
 ];
 
@@ -33,7 +35,7 @@ class OrderDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Status stepper ─────────────────────
+              // Status stepper
               if (!isCancelled)
                 Container(
                   width: double.infinity,
@@ -46,41 +48,57 @@ class OrderDetailScreen extends StatelessWidget {
                     children: List.generate(_kTrackableStatuses.length, (i) {
                       final done = i <= currentIndex;
                       final isLast = i == _kTrackableStatuses.length - 1;
+                      // Fixed: the circle+label used to sit in a bare
+                      // Column with no width limit, so a label like
+                      // "Out for Delivery" grew wider than its ~55px
+                      // share of the row and overflowed. Now the
+                      // column gets an explicit flex share and the
+                      // label wraps/ellipsizes within it instead of
+                      // growing past it.
                       return Expanded(
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              children: [
-                                Container(
-                                  width: 22,
-                                  height: 22,
-                                  decoration: BoxDecoration(
-                                    color: done
-                                        ? AppColors.primary
-                                        : AppColors.muted,
-                                    shape: BoxShape.circle,
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 22,
+                                    height: 22,
+                                    decoration: BoxDecoration(
+                                      color: done
+                                          ? AppColors.primary
+                                          : AppColors.muted,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: done
+                                        ? const Icon(Icons.check,
+                                        size: 13, color: Colors.white)
+                                        : null,
                                   ),
-                                  child: done
-                                      ? const Icon(Icons.check,
-                                      size: 13, color: Colors.white)
-                                      : null,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  _kTrackableStatuses[i].label,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    color: done
-                                        ? AppColors.primary
-                                        : AppColors.textTertiary,
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _kTrackableStatuses[i].label,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      height: 1.15,
+                                      fontWeight: FontWeight.w600,
+                                      color: done
+                                          ? AppColors.primary
+                                          : AppColors.textTertiary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             if (!isLast)
                               Expanded(
+                                flex: 1,
                                 child: Container(
                                   margin:
                                   const EdgeInsets.only(bottom: 20),
@@ -112,9 +130,50 @@ class OrderDetailScreen extends StatelessWidget {
                         color: AppColors.errorText),
                   ),
                 ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // ── Items ────────────────────────────────
+              // Tracking info
+              if (order.trackingNumber != null || order.courierName != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.muted,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_shipping_outlined,
+                          size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (order.courierName != null)
+                              Text(order.courierName!,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary)),
+                            if (order.trackingNumber != null)
+                              Text('Tracking: ${order.trackingNumber}',
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textTertiary)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                const SizedBox.shrink(),
+
+              const SizedBox(height: 4),
+
+              // Items
               const Text('ITEMS',
                   style: TextStyle(
                       fontSize: 10,
@@ -156,18 +215,23 @@ class OrderDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(p.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textPrimary)),
                           const SizedBox(height: 2),
                           Text('Sold by ${p.sellerName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.textTertiary)),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text('Rs. ${_formatPrice(p.price)}',
                         style: const TextStyle(
                             fontSize: 13,
@@ -178,7 +242,7 @@ class OrderDetailScreen extends StatelessWidget {
               )),
               const SizedBox(height: 10),
 
-              // ── Delivery address ─────────────────────
+              // Delivery address
               const Text('DELIVERY ADDRESS',
                   style: TextStyle(
                       fontSize: 10,
@@ -216,7 +280,7 @@ class OrderDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // ── Payment summary ──────────────────────
+              // Payment summary
               const Text('PAYMENT SUMMARY',
                   style: TextStyle(
                       fontSize: 10,

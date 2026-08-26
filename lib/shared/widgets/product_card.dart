@@ -11,6 +11,13 @@ import 'trust_score.dart';
 /// The core discovery component — used in Home grid, Explore results,
 /// wishlist, etc. At a glance shows: image, condition, name, price,
 /// seller trust score.
+///
+/// Layout note: the image section uses Expanded (not a fixed
+/// AspectRatio) so it always fills exactly the space left over after
+/// the text section below it. This guarantees the whole card fits
+/// within whatever height the GridView cell gives it — on a wide
+/// Chrome window that height is generous, on a real phone it's much
+/// tighter, and a fixed-height image was overflowing by ~39px there.
 class ProductCard extends ConsumerWidget {
   final Product product;
   final VoidCallback onTap;
@@ -43,9 +50,10 @@ class ProductCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image + condition badge + wishlist button
-            AspectRatio(
-              aspectRatio: 3 / 4,
+            // Image + condition badge + wishlist button.
+            // Expanded (not AspectRatio) so this section shrinks/grows
+            // to fit whatever space the grid cell actually gives it.
+            Expanded(
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -116,10 +124,11 @@ class ProductCard extends ConsumerWidget {
                 ],
               ),
             ),
-            // Info section
+            // Info section — fixed intrinsic height, never scaled.
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -135,6 +144,8 @@ class ProductCard extends ConsumerWidget {
                   const SizedBox(height: 1),
                   Text(
                     p.brand,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textTertiary,
@@ -143,6 +154,8 @@ class ProductCard extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Rs. ${_formatPrice(p.price)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -154,9 +167,11 @@ class ProductCard extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TrustScore(score: p.seller.trustScore, compact: true),
+                      const SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           p.seller.name,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 10,

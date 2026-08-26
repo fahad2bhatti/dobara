@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/product_card.dart';
 import '../../../cart/data/cart_providers.dart';
+import '../../../notifications/data/notifications_providers.dart';
 import '../../../listings/domain/listings_provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -121,7 +122,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               Row(
                 children: [
-                  _circleIconButton(Icons.notifications_outlined),
+                  Builder(builder: (context) {
+                    final unread = ref.watch(unreadNotificationsCountProvider);
+                    return GestureDetector(
+                      onTap: () => context.push('/notifications'),
+                      child: _circleIconButton(
+                        Icons.notifications_outlined,
+                        badgeCount: unread > 0 ? unread : null,
+                      ),
+                    );
+                  }),
                   const SizedBox(width: 8),
                   Builder(builder: (context) {
                     final count = ref.watch(cartCountProvider);
@@ -202,12 +212,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  // Fixed: SizedBox height bumped 42 -> 48 and the ListView's own
+  // vertical padding trimmed 10 -> 6. At height 42 the chip (text +
+  // its own 6+6 vertical padding, ~26px) didn't actually fit inside
+  // the ~22px left after the ListView's padding, so it was silently
+  // clipped top/bottom by the scroll viewport — no error was thrown
+  // because clipping isn't a RenderFlex overflow, it just cut the text.
   Widget _buildCategories() {
     return SizedBox(
-      height: 42,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         itemCount: _kCategories.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
@@ -224,9 +240,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               alignment: Alignment.center,
               child: Text(
                 c,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
+                  height: 1.1,
                   color: selected ? AppColors.background : AppColors.textSecondary,
                 ),
               ),
@@ -290,7 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Curated pre-loved pieces — trusted sellers',
+              'Curated pre-loved pieces ? trusted sellers',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.white.withValues(alpha: 0.75),

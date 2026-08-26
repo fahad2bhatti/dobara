@@ -18,6 +18,7 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/cart/presentation/screens/cart_screen.dart';
 import '../../features/checkout/presentation/screens/checkout_screen.dart';
 import '../../features/orders/presentation/screens/order_history_screen.dart';
+import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/orders/presentation/screens/order_detail_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/listings_moderation_screen.dart';
@@ -26,6 +27,8 @@ import '../../shared/models/product_model.dart';
 import '../../shared/models/order_model.dart';
 import 'app_shell_scaffold.dart';
 import '../../features/admin/presentation/screens/users_list_screen.dart';
+import '../../features/admin/presentation/screens/admin_orders_screen.dart';
+import '../../features/admin/presentation/screens/admin_order_update_screen.dart';
 
 /// Routes that require a signed-in user. Home, Explore, and Wishlist
 /// stay open to guest browsing per product decision.
@@ -157,6 +160,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+
       // TODO Phase 10.5: also check isAdminProvider in redirect once
       // Admin role-gating is tackled, not just signed-in status.
       GoRoute(
@@ -174,6 +182,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(                                                    // ADD
             path: 'users',                                            // ADD
             builder: (context, state) => const UsersListScreen(),      // ADD
+          ),
+          GoRoute(
+            path: 'orders',
+            builder: (context, state) => const AdminOrdersScreen(),
+            routes: [
+              GoRoute(
+                path: 'update', // -> /admin/orders/update, extra: order
+                builder: (context, state) {
+                  final order = state.extra as Order;
+                  return AdminOrderUpdateScreen(order: order);
+                },
+              ),
+            ],
           ),
         ],
       ),

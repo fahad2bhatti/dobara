@@ -4,7 +4,9 @@ import 'cart_model.dart';
 enum OrderStatus {
   placed('Order Placed'),
   confirmed('Confirmed'),
+  packed('Packed'),
   shipped('Shipped'),
+  outForDelivery('Out for Delivery'),
   delivered('Delivered'),
   cancelled('Cancelled');
 
@@ -89,6 +91,9 @@ class Order {
   final String city;
   final OrderStatus status;
   final DateTime placedAt;
+  final String? trackingNumber;
+  final String? courierName;
+  final DateTime? statusUpdatedAt;
 
   const Order({
     required this.id,
@@ -103,22 +108,34 @@ class Order {
     required this.city,
     required this.status,
     required this.placedAt,
+    this.trackingNumber,
+    this.courierName,
+    this.statusUpdatedAt,
   });
 
-  Order copyWith({OrderStatus? status}) => Order(
-    id: id,
-    buyerId: buyerId,
-    items: items,
-    subtotal: subtotal,
-    deliveryFee: deliveryFee,
-    total: total,
-    customerName: customerName,
-    phone: phone,
-    address: address,
-    city: city,
-    status: status ?? this.status,
-    placedAt: placedAt,
-  );
+  Order copyWith({
+    OrderStatus? status,
+    String? trackingNumber,
+    String? courierName,
+    DateTime? statusUpdatedAt,
+  }) =>
+      Order(
+        id: id,
+        buyerId: buyerId,
+        items: items,
+        subtotal: subtotal,
+        deliveryFee: deliveryFee,
+        total: total,
+        customerName: customerName,
+        phone: phone,
+        address: address,
+        city: city,
+        status: status ?? this.status,
+        placedAt: placedAt,
+        trackingNumber: trackingNumber ?? this.trackingNumber,
+        courierName: courierName ?? this.courierName,
+        statusUpdatedAt: statusUpdatedAt ?? this.statusUpdatedAt,
+      );
 
   /// sellerIds is denormalized alongside items so a future "seller order
   /// list" screen can query orders with `array-contains` on a seller's uid
@@ -136,6 +153,8 @@ class Order {
     'city': city,
     'status': status.name,
     'placedAt': FieldValue.serverTimestamp(),
+    'trackingNumber': trackingNumber,
+    'courierName': courierName,
   };
 
   factory Order.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -158,6 +177,9 @@ class Order {
       // (e.g. from cache before the server ack) may briefly have a null
       // placedAt. Fall back to now so the UI never shows a broken date.
       placedAt: (map['placedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      trackingNumber: map['trackingNumber'] as String?,
+      courierName: map['courierName'] as String?,
+      statusUpdatedAt: (map['statusUpdatedAt'] as Timestamp?)?.toDate(),
     );
   }
 }
