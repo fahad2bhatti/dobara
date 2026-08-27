@@ -39,16 +39,22 @@ final totalPlatformSalesCountProvider = Provider<int>((ref) {
   return orders.where((o) => o.status == OrderStatus.delivered).length;
 });
 
+/// Simple repeat-purchase trust tier, shared by the Profile stat card
+/// (for the signed-in user) and the admin Users list (per buyer).
+String trustTierLabel(int completedPurchases) {
+  if (completedPurchases >= 6) return 'Gold';
+  if (completedPurchases >= 3) return 'Silver';
+  if (completedPurchases >= 1) return 'Bronze';
+  return 'New';
+}
+
 /// Simple repeat-purchase trust tier — grows automatically as
 /// completedPurchasesCountProvider grows, no manual admin input needed.
 /// Short single-word tiers so they fit the profile stat card's bold
 /// value text without wrapping.
 final trustScoreLabelProvider = Provider<String>((ref) {
   final completed = ref.watch(completedPurchasesCountProvider);
-  if (completed >= 6) return 'Gold';
-  if (completed >= 3) return 'Silver';
-  if (completed >= 1) return 'Bronze';
-  return 'New';
+  return trustTierLabel(completed);
 });
 
 class OrdersActions extends Notifier<void> {

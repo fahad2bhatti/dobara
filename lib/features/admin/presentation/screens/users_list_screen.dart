@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/user_profile_model.dart';
+import '../../../../shared/models/order_model.dart';
+import '../../../orders/domain/orders_provider.dart';
 import '../../domain/users_provider.dart';
 
 class UsersListScreen extends ConsumerWidget {
@@ -10,6 +12,9 @@ class UsersListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(usersStreamProvider);
+    // Watched once here (not per-tile) so all rows' trust tiers derive
+    // from the same snapshot without each tile re-subscribing.
+    final allOrders = ref.watch(adminOrdersStreamProvider).asData?.value ?? const [];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -22,7 +27,8 @@ class UsersListScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             itemCount: users.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, i) => _userTile(context, ref, users[i]),
+            itemBuilder: (context, i) =>
+                _userTile(context, ref, users[i], allOrders),
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Could not load users: $e')),
@@ -31,8 +37,22 @@ class UsersListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _userTile(BuildContext context, WidgetRef ref, UserProfile user) {
+  Widget _userTile(
+      BuildContext context, WidgetRef ref, UserProfile user, List<Order> allOrders) {
     final isAdminUser = user.role == 'admin';
+    final userOrders = allOrders.where((o) => o.buyerId == user.id).toList();
+    final completedPurchases =
+        userOrders.where((o) => o.status == OrderStatus.delivered).length;
+    final tier = trustTierLabel(completedPurchases);
+    // user.city is a fake signup default (always "Lahore", never actually
+    // set by the user) — use the real delivery city from their most
+    // recent order instead. No orders yet → no city shown at all, rather
+    // than a made-up one.
+    final realCity = userOrders.isNotEmpty
+        ? (userOrders..sort((a, b) => b.placedAt.compareTo(a.placedAt)))
+        .first
+        .city
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -85,6 +105,9 @@ class UsersListScreen extends ConsumerWidget {
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary)),
                       ),
+                    ] else ...[
+                      const SizedBox(width: 6),
+                      _trustBadge(tier),
                     ],
                   ],
                 ),
@@ -93,9 +116,14 @@ class UsersListScreen extends ConsumerWidget {
                     style: const TextStyle(
                         fontSize: 11, color: AppColors.textTertiary)),
                 const SizedBox(height: 2),
-                Text('${user.completedSales} sales · ${user.city}',
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.textTertiary)),
+                Text(
+                  isAdminUser
+                      ? (realCity ?? '')
+                      : '$completedPurchases completed purchase${completedPurchases == 1 ? '' : 's'}'
+                      '${realCity != null ? ' · $realCity' : ''}',
+                  style: const TextStyle(
+                      fontSize: 11, color: AppColors.textTertiary),
+                ),
               ],
             ),
           ),
@@ -109,6 +137,25 @@ class UsersListScreen extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _trustBadge(String tier) {
+    final (bg, fg) = switch (tier) {
+      'Gold' => (const Color(0xFFFCEFC7), const Color(0xFF8A6300)),
+      'Silver' => (const Color(0xFFE7E7E7), const Color(0xFF5A5A5A)),
+      'Bronze' => (const Color(0xFFF3E0D2), const Color(0xFF8A4B1E)),
+      _ => (AppColors.muted, AppColors.textTertiary),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(tier,
+          style: TextStyle(
+              fontSize: 9, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 
