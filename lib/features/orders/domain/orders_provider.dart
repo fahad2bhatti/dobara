@@ -20,6 +20,37 @@ final adminOrdersStreamProvider = StreamProvider<List<Order>>((ref) {
   return ref.watch(ordersRepositoryProvider).watchAllOrders();
 });
 
+/// Signed-in user's own completed (delivered) purchase count — recomputed
+/// live from ordersStreamProvider, so it updates the moment an order's
+/// status is set to Delivered. Used on the Profile stats card and to
+/// derive the trust score below.
+final completedPurchasesCountProvider = Provider<int>((ref) {
+  final orders = ref.watch(ordersStreamProvider).asData?.value ?? const [];
+  return orders.where((o) => o.status == OrderStatus.delivered).length;
+});
+
+/// Total delivered orders across the whole platform — meaningful for the
+/// admin's own Profile stats (admin is the sole seller in Dobara's
+/// admin-only-selling model), always 0 for a regular buyer.
+final totalPlatformSalesCountProvider = Provider<int>((ref) {
+  final isAdmin = ref.watch(isAdminProvider);
+  if (!isAdmin) return 0;
+  final orders = ref.watch(adminOrdersStreamProvider).asData?.value ?? const [];
+  return orders.where((o) => o.status == OrderStatus.delivered).length;
+});
+
+/// Simple repeat-purchase trust tier — grows automatically as
+/// completedPurchasesCountProvider grows, no manual admin input needed.
+/// Short single-word tiers so they fit the profile stat card's bold
+/// value text without wrapping.
+final trustScoreLabelProvider = Provider<String>((ref) {
+  final completed = ref.watch(completedPurchasesCountProvider);
+  if (completed >= 6) return 'Gold';
+  if (completed >= 3) return 'Silver';
+  if (completed >= 1) return 'Bronze';
+  return 'New';
+});
+
 class OrdersActions extends Notifier<void> {
   @override
   void build() {}

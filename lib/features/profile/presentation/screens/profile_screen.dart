@@ -6,6 +6,7 @@ import '../../../admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../listings/presentation/screens/my_listings_screen.dart';
 import '../../../auth/domain/auth_provider.dart';
+import '../../../orders/domain/orders_provider.dart';
 
 
 /// Buyer's own profile — stats card, "Become a Seller" upsell, menu.
@@ -139,9 +140,24 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       child: Row(
                         children: [
-                          _statColumn('0', 'Sales'),
-                          _statColumn('0', 'Purchases'),
-                          _statColumn('—', 'Trust Score'),
+                          _statColumn(
+                            isSignedIn
+                                ? '${ref.watch(totalPlatformSalesCountProvider)}'
+                                : '0',
+                            'Sales',
+                          ),
+                          _statColumn(
+                            isSignedIn
+                                ? '${ref.watch(completedPurchasesCountProvider)}'
+                                : '0',
+                            'Purchases',
+                          ),
+                          _statColumn(
+                            isSignedIn
+                                ? ref.watch(trustScoreLabelProvider)
+                                : '—',
+                            'Trust Score',
+                          ),
                         ],
                       ),
                     ),
