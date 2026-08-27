@@ -5,10 +5,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/product_model.dart';
 import '../../../../shared/widgets/condition_badge.dart';
 import '../../../../shared/widgets/trust_score.dart';
+import '../../../../shared/widgets/image_zoom_viewer.dart';
 import '../../../cart/data/cart_providers.dart';
 import '../../../../shared/models/report_model.dart';
 import '../../../wishlist/data/wishlist_providers.dart';
 import '../widgets/report_sheet.dart';
+import '../../../checkout/presentation/screens/checkout_screen.dart';
 import 'package:go_router/go_router.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
@@ -32,6 +34,15 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
         : ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=520&fit=crop&auto=format'];
   }
 
+  void _openZoomViewer() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ImageZoomViewer(images: _images, initialIndex: _imgIdx),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -47,7 +58,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Top bar ─────────────────────────────
+            // Top bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
               child: Row(
@@ -87,57 +98,77 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
               ),
             ),
 
-            // ── Scrollable content ──────────────────
+            // Scrollable content
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image gallery — swipeable, with dot indicators
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: AppColors.muted,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 4 / 5,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            PageView.builder(
-                              controller: _pageController,
-                              itemCount: _images.length,
-                              onPageChanged: (i) => setState(() => _imgIdx = i),
-                              itemBuilder: (context, i) => CachedNetworkImage(
-                                imageUrl: _images[i],
-                                fit: BoxFit.cover,
+                    // Image gallery — swipeable, with dot indicators.
+                    // Wrapped in GestureDetector so tapping any image
+                    // opens the full-screen pinch-to-zoom viewer.
+                    GestureDetector(
+                      onTap: _openZoomViewer,
+                      child: Container(
+                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: AppColors.muted,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: 4 / 5,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              PageView.builder(
+                                controller: _pageController,
+                                itemCount: _images.length,
+                                onPageChanged: (i) => setState(() => _imgIdx = i),
+                                itemBuilder: (context, i) => CachedNetworkImage(
+                                  imageUrl: _images[i],
+                                  fit: BoxFit.cover,
+                                ),
                               ),
-                            ),
-                            if (p.isSoldOut)
-                              Positioned(
-                                top: 12,
-                                left: 12,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.75),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: const Text(
-                                    'SOLD OUT',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 1,
-                                      color: Colors.white,
+                              if (p.isSoldOut)
+                                Positioned(
+                                  top: 12,
+                                  left: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.75),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: const Text(
+                                      'SOLD OUT',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
+                              // Small zoom affordance hint, bottom-right.
+                              Positioned(
+                                bottom: 10,
+                                right: 10,
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.45),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.zoom_in,
+                                      size: 16, color: Colors.white),
+                                ),
                               ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -408,7 +439,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
         ),
       ),
 
-      // ── Fixed CTA bar ─────────────────────────────
+      // Fixed CTA bar
       bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         decoration: BoxDecoration(
@@ -423,7 +454,15 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: p.isSoldOut ? null : () {},
+                  onPressed: p.isSoldOut
+                      ? null
+                      : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CheckoutScreen(buyNowProduct: p),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     disabledBackgroundColor:

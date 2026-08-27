@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'cart_model.dart';
+import 'product_model.dart';
 
 enum OrderStatus {
   placed('Order Placed'),
@@ -56,6 +57,20 @@ class OrderItem {
     sellerName: item.sellerName,
     quantity: item.quantity,
   );
+
+  /// Buy Now path — builds an order item straight from a Product,
+  /// bypassing the cart entirely (nothing is written to
+  /// cart/{uid}/items for a Buy Now purchase).
+  factory OrderItem.fromProduct(Product product, {int quantity = 1}) =>
+      OrderItem(
+        listingId: product.id,
+        name: product.name,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        sellerId: product.seller.id,
+        sellerName: product.seller.name,
+        quantity: quantity,
+      );
 
   Map<String, dynamic> toMap() => {
     'listingId': listingId,
