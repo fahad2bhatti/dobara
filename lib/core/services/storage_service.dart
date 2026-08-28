@@ -23,14 +23,25 @@ class StorageService {
     required String sellerId,
     required String listingId,
     required List<Uint8List> images,
+  }) {
+    return uploadImages(
+      folder: 'dobara/listings/$sellerId/$listingId',
+      images: images,
+    );
+  }
+
+  /// Generic Cloudinary upload — used for listing photos and review
+  /// photos alike, just under a different folder.
+  Future<List<String>> uploadImages({
+    required String folder,
+    required List<Uint8List> images,
   }) async {
     final urls = <String>[];
 
     for (var i = 0; i < images.length; i++) {
       final request = http.MultipartRequest('POST', _uploadUrl)
         ..fields['upload_preset'] = _uploadPreset
-        ..fields['folder'] = 'dobara/listings/$sellerId/$listingId'
-        ..fields['public_id'] = '$i'
+        ..fields['folder'] = folder
         ..files.add(
           http.MultipartFile.fromBytes(
             'file',

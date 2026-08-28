@@ -29,6 +29,8 @@ import 'app_shell_scaffold.dart';
 import '../../features/admin/presentation/screens/users_list_screen.dart';
 import '../../features/admin/presentation/screens/admin_orders_screen.dart';
 import '../../features/admin/presentation/screens/admin_order_update_screen.dart';
+import '../../features/reviews/presentation/screens/review_form_screen.dart';
+import '../../shared/models/review_model.dart';
 
 /// Routes that require a signed-in user. Home, Explore, and Wishlist
 /// stay open to guest browsing per product decision.
@@ -163,6 +165,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+
+      GoRoute(
+        path: '/review-form',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return ReviewFormScreen(
+            listingId: extra['listingId'] as String,
+            existing: extra['existing'] as Review?,
+          );
+        },
       ),
 
       // TODO Phase 10.5: also check isAdminProvider in redirect once

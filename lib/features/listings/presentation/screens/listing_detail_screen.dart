@@ -11,6 +11,8 @@ import '../../../../shared/models/report_model.dart';
 import '../../../wishlist/data/wishlist_providers.dart';
 import '../widgets/report_sheet.dart';
 import '../../../checkout/presentation/screens/checkout_screen.dart';
+import '../../../reviews/data/reviews_providers.dart';
+import '../../../../shared/models/review_model.dart';
 import 'package:go_router/go_router.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
@@ -408,6 +410,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                           ),
                           const SizedBox(height: 16),
 
+                          _ReviewsSection(listingId: p.id),
+                          const SizedBox(height: 16),
+
                           TextButton(
                             onPressed: () => showReportSheet(
                               context,
@@ -564,5 +569,156 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
       buf.write(s[i]);
     }
     return buf.toString();
+  }
+}
+
+class _ReviewsSection extends ConsumerWidget {
+  final String listingId;
+
+  const _ReviewsSection({required this.listingId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviewsAsync = ref.watch(reviewsStreamProvider(listingId));
+    final stats = ref.watch(reviewStatsProvider(listingId));
+    final myReview = ref.watch(myReviewProvider(listingId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'REVIEWS',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.4,
+                color: AppColors.textTertiary,
+              ),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () => context.push(
+                '/review-form',
+                extra: {'listingId': listingId, 'existing': myReview},
+              ),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                myReview != null ? 'Edit Your Review' : 'Write a Review',
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (stats.count > 0)
+          Row(
+            children: [
+              Row(
+                children: List.generate(5, (i) {
+                  final filled = i < stats.average.round();
+                  return Icon(
+                    filled ? Icons.star_rounded : Icons.star_border_rounded,
+                    size: 16,
+                    color: const Color(0xFFF5A623),
+                  );
+                }),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '${stats.average.toStringAsFixed(1)} (${stats.count} review${stats.count == 1 ? '' : 's'})',
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        const SizedBox(height: 10),
+        reviewsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (e, _) => const SizedBox.shrink(),
+          data: (reviews) {
+            if (reviews.isEmpty) {
+              return const Text(
+                'No reviews yet — be the first to share your experience.',
+                style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+              );
+            }
+            return Column(
+              children: reviews.map((r) => _reviewTile(r)).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _reviewTile(Review r) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.muted,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(r.userName,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary)),
+              const Spacer(),
+              Row(
+                children: List.generate(
+                  5,
+                      (i) => Icon(
+                    i < r.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                    size: 12,
+                    color: const Color(0xFFF5A623),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(r.comment,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.textBody, height: 1.5)),
+          if (r.photoUrls.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 56,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: r.photoUrls.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemBuilder: (context, i) => ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedNetworkImage(
+                    imageUrl: r.photoUrls[i],
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
