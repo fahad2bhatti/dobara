@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/report_model.dart';
 import '../../../admin/domain/reports_provider.dart';
+import '../../../auth/domain/auth_provider.dart';
 
 /// Call `showReportSheet(context, ...)` to open. Used for both
 /// "Report Listing" and "Report Seller" — pass the appropriate
@@ -44,6 +45,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
   ReportReason? _reason;
   final _noteController = TextEditingController();
   bool _submitted = false;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -51,11 +53,22 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_reason == null) return;
+  Future<void> _submit() async {
+    if (_reason == null || _submitting) return;
+
+    final user = ref.read(currentUserProvider);
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to submit a report.')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
 
     final report = Report(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: '', // ignored by toMap(); Firestore assigns the real doc id
+      reporterId: user.uid,
       targetType: widget.targetType,
       targetId: widget.targetId,
       targetLabel: widget.targetLabel,
@@ -66,10 +79,20 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
       reportedAt: DateTime.now(),
     );
 
-    // TODO Phase 11 (post-auth Firestore pass): write to
-    // reports/{reportId} tied to the real reporting user id.
-    ref.read(reportsProvider.notifier).addReport(report);
-    setState(() => _submitted = true);
+    try {
+      await ref.read(reportsActionsProvider.notifier).submit(report);
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _submitted = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not submit report: $e')),
+      );
+    }
   }
 
   @override
@@ -203,7 +226,7 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _reason == null ? null : _submit,
+            onPressed: (_reason == null || _submitting) ? null : _submit,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.errorText,
               disabledBackgroundColor:
@@ -214,7 +237,14 @@ class _ReportSheetState extends ConsumerState<_ReportSheet> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
-            child: const Text(
+            child: _submitting
+                ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white),
+            )
+                : const Text(
               'Submit Report',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),

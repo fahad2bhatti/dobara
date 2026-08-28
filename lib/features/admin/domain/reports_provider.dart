@@ -1,23 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/report_model.dart';
+import '../data/reports_repository.dart';
 
-/// In-memory reports queue for this session — feeds the Admin
-/// Moderation screen (Phase 9).
-/// TODO Phase 11 (post-auth Firestore pass): persist to Firestore
-/// under reports/{reportId}, tied to the real reporting user id.
-class ReportsNotifier extends Notifier<List<Report>> {
+final reportsRepositoryProvider =
+Provider<ReportsRepository>((ref) => ReportsRepository());
+
+/// All open reports, across every buyer — admin moderation queue.
+final reportsStreamProvider = StreamProvider<List<Report>>((ref) {
+  return ref.watch(reportsRepositoryProvider).watchReports();
+});
+
+class ReportsActions extends Notifier<void> {
   @override
-  List<Report> build() => [];
+  void build() {}
 
-  void addReport(Report report) {
-    state = [report, ...state];
+  Future<void> submit(Report report) {
+    return ref.read(reportsRepositoryProvider).submitReport(report);
   }
 
-  void dismiss(String reportId) {
-    state = state.where((r) => r.id != reportId).toList();
+  Future<void> dismiss(String reportId) {
+    return ref.read(reportsRepositoryProvider).dismissReport(reportId);
   }
 }
 
-final reportsProvider = NotifierProvider<ReportsNotifier, List<Report>>(
-  ReportsNotifier.new,
-);
+final reportsActionsProvider =
+NotifierProvider<ReportsActions, void>(ReportsActions.new);

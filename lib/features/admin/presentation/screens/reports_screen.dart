@@ -10,13 +10,21 @@ class ReportsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reports = ref.watch(reportsProvider);
+    final reportsAsync = ref.watch(reportsStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('User Reports')),
       body: SafeArea(
-        child: reports.isEmpty ? _buildEmpty() : _buildList(ref, reports),
+        child: reportsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Text('Could not load reports: $e',
+                style: const TextStyle(color: AppColors.textTertiary)),
+          ),
+          data: (reports) =>
+          reports.isEmpty ? _buildEmpty() : _buildList(ref, reports),
+        ),
       ),
     );
   }
@@ -137,7 +145,7 @@ class ReportsScreen extends ConsumerWidget {
                       onPressed: () {
                         // TODO: wire real "remove listing / suspend seller"
                         // action once backed by Firestore.
-                        ref.read(reportsProvider.notifier).dismiss(r.id);
+                        ref.read(reportsActionsProvider.notifier).dismiss(r.id);
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.errorText,
@@ -155,7 +163,7 @@ class ReportsScreen extends ConsumerWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () =>
-                          ref.read(reportsProvider.notifier).dismiss(r.id),
+                          ref.read(reportsActionsProvider.notifier).dismiss(r.id),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
                         side: const BorderSide(color: AppColors.border),

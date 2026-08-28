@@ -17,7 +17,7 @@ class AdminDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ordersAsync = ref.watch(adminOrdersStreamProvider);
-    final reports = ref.watch(reportsProvider);
+    final reports = ref.watch(reportsStreamProvider).asData?.value ?? const [];
     final usersAsync = ref.watch(usersStreamProvider);
     final listingsAsync = ref.watch(listingsStreamProvider);
 
