@@ -31,7 +31,7 @@ Provider.family<ReviewStats, String>((ref, listingId) {
 /// Your Review", and to pre-fill the form.
 final myReviewProvider = Provider.family<Review?, String>((ref, listingId) {
   final user = ref.watch(currentUserProvider);
-  if (user == null) return null;
+  if (user == null || user.isAnonymous) return null;
   final reviews = ref.watch(reviewsStreamProvider(listingId)).asData?.value ?? const [];
   for (final r in reviews) {
     if (r.id == user.uid) return r;
@@ -45,13 +45,17 @@ class ReviewsActions extends Notifier<void> {
 
   Future<void> submit(String listingId, Review review) async {
     final user = ref.read(currentUserProvider);
-    if (user == null) return;
+    if (user == null || user.isAnonymous) {
+      throw Exception('You must be signed in to write a review.');
+    }
     await ref.read(reviewsRepositoryProvider).submitReview(listingId, user.uid, review);
   }
 
   Future<void> delete(String listingId) async {
     final user = ref.read(currentUserProvider);
-    if (user == null) return;
+    if (user == null || user.isAnonymous) {
+      throw Exception('You must be signed in to delete a review.');
+    }
     await ref.read(reviewsRepositoryProvider).deleteReview(listingId, user.uid);
   }
 }

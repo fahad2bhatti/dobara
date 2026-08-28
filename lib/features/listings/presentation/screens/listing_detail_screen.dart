@@ -13,6 +13,7 @@ import '../widgets/report_sheet.dart';
 import '../../../checkout/presentation/screens/checkout_screen.dart';
 import '../../../reviews/data/reviews_providers.dart';
 import '../../../../shared/models/review_model.dart';
+import '../../../auth/domain/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
@@ -599,10 +600,21 @@ class _ReviewsSection extends ConsumerWidget {
             ),
             const Spacer(),
             TextButton(
-              onPressed: () => context.push(
-                '/review-form',
-                extra: {'listingId': listingId, 'existing': myReview},
-              ),
+              onPressed: () {
+                final user = ref.read(currentUserProvider);
+                if (user == null || user.isAnonymous) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Please sign in to write a review.')),
+                  );
+                  context.push('/login');
+                  return;
+                }
+                context.push(
+                  '/review-form',
+                  extra: {'listingId': listingId, 'existing': myReview},
+                );
+              },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,
