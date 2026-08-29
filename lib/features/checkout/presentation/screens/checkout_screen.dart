@@ -8,40 +8,9 @@ import '../../../auth/domain/auth_provider.dart';
 import '../../../cart/data/cart_providers.dart';
 import '../../../orders/domain/orders_provider.dart';
 import '../../../addresses/data/addresses_providers.dart';
+import '../../../../shared/constants/pk_locations.dart';
 
 const int _kDeliveryFee = 200;
-
-const List<String> _kProvinces = [
-  'Punjab',
-  'Sindh',
-  'Khyber Pakhtunkhwa',
-  'Balochistan',
-  'Islamabad',
-  'Gilgit-Baltistan',
-  'Azad Kashmir',
-];
-
-const Map<String, List<String>> _kCitiesByProvince = {
-  'Punjab': [
-    'Lahore', 'Faisalabad', 'Rawalpindi', 'Multan', 'Gujranwala',
-    'Sialkot', 'Bahawalpur', 'Sargodha', 'Sheikhupura', 'Rahim Yar Khan',
-    'Gujrat', 'Jhelum',
-  ],
-  'Sindh': [
-    'Karachi', 'Hyderabad', 'Sukkur', 'Larkana', 'Nawabshah', 'Mirpur Khas',
-  ],
-  'Khyber Pakhtunkhwa': [
-    'Peshawar', 'Abbottabad', 'Mardan', 'Swat', 'Kohat', 'Bannu', 'Mingora',
-  ],
-  'Balochistan': [
-    'Quetta', 'Gwadar', 'Turbat', 'Khuzdar', 'Sibi',
-  ],
-  'Islamabad': ['Islamabad'],
-  'Gilgit-Baltistan': ['Gilgit', 'Skardu', 'Hunza'],
-  'Azad Kashmir': ['Muzaffarabad', 'Mirpur', 'Rawalakot'],
-};
-
-const List<String> _kAddressLabels = ['Home', 'Office', 'Other'];
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   /// When set, this is a Buy Now purchase — the order is built from
@@ -102,7 +71,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _phoneController.text = a.phone;
       _addressController.text = a.address;
       _selectedProvince = a.province;
-      final cities = _kCitiesByProvince[a.province] ?? const [];
+      final cities = kCitiesByProvince[a.province] ?? const [];
       if (cities.contains(a.city)) {
         _selectedCity = a.city;
         _customCity = false;
@@ -571,7 +540,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           const SizedBox(height: 4),
           Wrap(
             spacing: 8,
-            children: _kAddressLabels.map((l) {
+            children: kAddressLabels.map((l) {
               final sel = l == _newAddressLabel;
               return GestureDetector(
                 onTap: () => setState(() => _newAddressLabel = l),
@@ -605,10 +574,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: _kProvinces.length,
+        itemCount: kProvinces.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final prov = _kProvinces[i];
+          final prov = kProvinces[i];
           final selected = prov == _selectedProvince;
           return GestureDetector(
             onTap: () => setState(() {
@@ -647,7 +616,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
       );
     }
-    final cities = _kCitiesByProvince[_selectedProvince] ?? const <String>[];
+    final cities = kCitiesByProvince[_selectedProvince] ?? const <String>[];
     final options = [...cities, 'Other'];
 
     return SizedBox(

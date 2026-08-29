@@ -21,7 +21,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     match /listings/{listingId} {
@@ -38,6 +38,10 @@ service cloud.firestore {
     }
 
     match /cart/{userId}/items/{itemId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /addresses/{userId}/items/{addressId} {
       allow read, write: if isOwner(userId);
     }
 

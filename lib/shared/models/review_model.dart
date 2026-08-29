@@ -6,6 +6,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// edits it rather than creating a duplicate).
 class Review {
   final String id; // == reviewer's uid
+  final String userId; // duplicate of id, stored so collectionGroup
+  // queries (e.g. "find every review by this user" for account
+  // deletion) can filter without knowing every listingId up front.
   final String listingId;
   final String userName;
   final int rating; // 1-5
@@ -15,6 +18,7 @@ class Review {
 
   const Review({
     required this.id,
+    required this.userId,
     required this.listingId,
     required this.userName,
     required this.rating,
@@ -24,6 +28,7 @@ class Review {
   });
 
   Map<String, dynamic> toMap() => {
+    'userId': userId,
     'listingId': listingId,
     'userName': userName,
     'rating': rating,
@@ -36,6 +41,7 @@ class Review {
     final map = doc.data()!;
     return Review(
       id: doc.id,
+      userId: map['userId'] ?? doc.id,
       listingId: map['listingId'] ?? '',
       userName: map['userName'] ?? 'Dobara user',
       rating: (map['rating'] as num?)?.toInt() ?? 5,

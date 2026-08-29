@@ -7,6 +7,7 @@ import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../listings/presentation/screens/my_listings_screen.dart';
 import '../../../auth/domain/auth_provider.dart';
 import '../../../orders/domain/orders_provider.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 
 
 /// Buyer's own profile — stats card, "Become a Seller" upsell, menu.
@@ -202,6 +203,12 @@ class ProfileScreen extends ConsumerWidget {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const AdminDashboardScreen(),
+                            ),
+                          );
+                        } else if (item[1] == 'Settings') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SettingsScreen(),
                             ),
                           );
                         } else if (item[1] == 'Sign Out') {

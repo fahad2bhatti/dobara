@@ -59,6 +59,55 @@ class FirebaseAuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// Firebase requires a "recent" login before letting an account be
+  /// deleted — this re-proves the current password so deleteAccount()
+  /// below doesn't hit a requires-recent-login error.
+  Future<void> reauthenticate(String password) async {
+    final user = _auth.currentUser;
+    if (user == null || user.email == null) return;
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  /// Deletes everything this client is allowed to remove for the
+  /// signed-in user, then revokes the Auth account itself. Orders are
+  /// deliberately left alone — Firestore rules block client delete/update
+  /// on them by design (so anonymizing needs a Cloud Function, tracked
+  /// separately); the caller should tell the user their order history
+  /// may remain for record-keeping.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    for (final collection in ['addresses', 'cart', 'wishlist', 'notifications']) {
+      final items = await _db.collection(collection).doc(uid).collection('items').get();
+      final batch = _db.batch();
+      for (final doc in items.docs) {
+        batch.delete(doc.reference);
+      }
+      batch.delete(_db.collection(collection).doc(uid));
+      await batch.commit();
+    }
+
+    // Reviews live under listings/{listingId}/reviews/{uid}, so a plain
+    // collection() lookup can't find them all — collectionGroup by the
+    // stored userId field catches every listing this uid reviewed.
+    final reviews = await _db
+        .collectionGroup('reviews')
+        .where('userId', isEqualTo: uid)
+        .get();
+    for (final doc in reviews.docs) {
+      await doc.reference.delete();
+    }
+
+    await _db.collection('users').doc(uid).delete();
+    await user.delete();
+  }
+
   /// Turns FirebaseAuthException codes into short, friendly copy.
   String friendlyError(Object error) {
     if (error is FirebaseAuthException) {

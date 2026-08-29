@@ -31,6 +31,13 @@ import '../../features/admin/presentation/screens/admin_orders_screen.dart';
 import '../../features/admin/presentation/screens/admin_order_update_screen.dart';
 import '../../features/reviews/presentation/screens/review_form_screen.dart';
 import '../../shared/models/review_model.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/settings/presentation/screens/edit_profile_screen.dart';
+import '../../features/settings/presentation/screens/manage_addresses_screen.dart';
+import '../../features/settings/presentation/screens/change_password_screen.dart';
+import '../../features/settings/presentation/screens/notification_settings_screen.dart';
+import '../../features/settings/presentation/screens/about_help_screen.dart';
+import '../../features/settings/presentation/screens/delete_account_screen.dart';
 
 /// Routes that require a signed-in user. Home, Explore, and Wishlist
 /// stay open to guest browsing per product decision.
@@ -39,6 +46,7 @@ const _protectedPaths = [
   '/cart',
   '/checkout',
   '/profile',
+  '/settings',
   '/my-listings',
   '/order-history',
   '/admin',
@@ -176,6 +184,37 @@ final routerProvider = Provider<GoRouter>((ref) {
             existing: extra['existing'] as Review?,
           );
         },
+      ),
+
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'edit-profile',
+            builder: (context, state) => const EditProfileScreen(),
+          ),
+          GoRoute(
+            path: 'addresses',
+            builder: (context, state) => const ManageAddressesScreen(),
+          ),
+          GoRoute(
+            path: 'change-password',
+            builder: (context, state) => const ChangePasswordScreen(),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationSettingsScreen(),
+          ),
+          GoRoute(
+            path: 'about',
+            builder: (context, state) => const AboutHelpScreen(),
+          ),
+          GoRoute(
+            path: 'delete-account',
+            builder: (context, state) => const DeleteAccountScreen(),
+          ),
+        ],
       ),
 
       // TODO Phase 10.5: also check isAdminProvider in redirect once

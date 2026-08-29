@@ -85,6 +85,7 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
         widget.listingId,
         Review(
           id: user?.uid ?? '',
+          userId: user?.uid ?? '',
           listingId: widget.listingId,
           userName: name,
           rating: _rating,
