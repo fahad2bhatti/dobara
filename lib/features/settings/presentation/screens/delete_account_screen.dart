@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/domain/auth_provider.dart';
 import '../../domain/settings_provider.dart';
@@ -64,7 +65,9 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       context.go('/login');
     } catch (e) {
       if (!mounted) return;
-      final message = ref.read(firebaseAuthServiceProvider).friendlyError(e);
+      final message = e is FirebaseAuthException
+          ? ref.read(firebaseAuthServiceProvider).friendlyError(e)
+          : 'Could not delete account: $e';
       setState(() => _deleting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
