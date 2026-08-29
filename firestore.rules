@@ -55,10 +55,14 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow read: if isSignedIn() &&
-        (resource.data.buyerId == request.auth.uid ||
-         resource.data.sellerId == request.auth.uid ||
-         isAdmin());
+      // Split into two rules (instead of one OR'd condition) so a
+      // buyer's own list query — .where('buyerId', isEqualTo: uid) —
+      // can be statically validated against the first rule alone.
+      // Combining it with isAdmin() (a get()-based check) in a single
+      // OR made Firestore unable to prove the query safe, so it denied
+      // the whole list, not just the admin branch.
+      allow read: if isSignedIn() && resource.data.buyerId == request.auth.uid;
+      allow read: if isAdmin();
       allow create: if isSignedIn() && request.resource.data.buyerId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if false;
