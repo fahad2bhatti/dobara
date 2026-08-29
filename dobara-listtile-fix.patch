@@ -1,0 +1,106 @@
+diff --git a/lib/features/settings/presentation/screens/about_help_screen.dart b/lib/features/settings/presentation/screens/about_help_screen.dart
+index 50cf6e9..b7b787d 100644
+--- a/lib/features/settings/presentation/screens/about_help_screen.dart
++++ b/lib/features/settings/presentation/screens/about_help_screen.dart
+@@ -37,11 +37,10 @@ class AboutHelpScreen extends StatelessWidget {
+           children: [
+             _sectionLabel('FREQUENTLY ASKED'),
+             const SizedBox(height: 8),
+-            Container(
+-              decoration: BoxDecoration(
+-                color: AppColors.surface,
+-                borderRadius: BorderRadius.circular(16),
+-              ),
++            Material(
++              color: AppColors.surface,
++              borderRadius: BorderRadius.circular(16),
++              clipBehavior: Clip.antiAlias,
+               child: Column(
+                 children: _faqs
+                     .map((f) => ExpansionTile(
+@@ -66,11 +65,10 @@ class AboutHelpScreen extends StatelessWidget {
+             const SizedBox(height: 20),
+             _sectionLabel('SUPPORT'),
+             const SizedBox(height: 8),
+-            Container(
+-              decoration: BoxDecoration(
+-                color: AppColors.surface,
+-                borderRadius: BorderRadius.circular(16),
+-              ),
++            Material(
++              color: AppColors.surface,
++              borderRadius: BorderRadius.circular(16),
++              clipBehavior: Clip.antiAlias,
+               child: ListTile(
+                 leading: const Text('✉️', style: TextStyle(fontSize: 16)),
+                 title: const Text(_kSupportEmail,
+@@ -88,11 +86,10 @@ class AboutHelpScreen extends StatelessWidget {
+             const SizedBox(height: 20),
+             _sectionLabel('LEGAL'),
+             const SizedBox(height: 8),
+-            Container(
+-              decoration: BoxDecoration(
+-                color: AppColors.surface,
+-                borderRadius: BorderRadius.circular(16),
+-              ),
++            Material(
++              color: AppColors.surface,
++              borderRadius: BorderRadius.circular(16),
++              clipBehavior: Clip.antiAlias,
+               child: Column(
+                 children: [
+                   ListTile(
+diff --git a/lib/features/settings/presentation/screens/notification_settings_screen.dart b/lib/features/settings/presentation/screens/notification_settings_screen.dart
+index fe1586c..ae232bf 100644
+--- a/lib/features/settings/presentation/screens/notification_settings_screen.dart
++++ b/lib/features/settings/presentation/screens/notification_settings_screen.dart
+@@ -91,26 +91,29 @@ class _NotificationSettingsScreenState
+     required bool value,
+     required ValueChanged<bool>? onChanged,
+   }) {
+-    return Container(
+-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+-      decoration: BoxDecoration(
+-        color: AppColors.surface,
+-        borderRadius: BorderRadius.circular(14),
+-        border: Border.all(color: AppColors.border, width: 1.5),
+-      ),
+-      child: SwitchListTile(
+-        contentPadding: EdgeInsets.zero,
+-        activeThumbColor: AppColors.primary,
+-        secondary: Text(icon, style: const TextStyle(fontSize: 18)),
+-        title: Text(title,
+-            style: const TextStyle(
+-                fontSize: 13,
+-                fontWeight: FontWeight.w600,
+-                color: AppColors.textPrimary)),
+-        subtitle: Text(subtitle,
+-            style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+-        value: value,
+-        onChanged: onChanged,
++    return Material(
++      color: AppColors.surface,
++      borderRadius: BorderRadius.circular(14),
++      child: Container(
++        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
++        decoration: BoxDecoration(
++          borderRadius: BorderRadius.circular(14),
++          border: Border.all(color: AppColors.border, width: 1.5),
++        ),
++        child: SwitchListTile(
++          contentPadding: EdgeInsets.zero,
++          activeThumbColor: AppColors.primary,
++          secondary: Text(icon, style: const TextStyle(fontSize: 18)),
++          title: Text(title,
++              style: const TextStyle(
++                  fontSize: 13,
++                  fontWeight: FontWeight.w600,
++                  color: AppColors.textPrimary)),
++          subtitle: Text(subtitle,
++              style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
++          value: value,
++          onChanged: onChanged,
++        ),
+       ),
+     );
+   }

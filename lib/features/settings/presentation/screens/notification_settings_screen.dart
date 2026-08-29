@@ -91,26 +91,29 @@ class _NotificationSettingsScreenState
     required bool value,
     required ValueChanged<bool>? onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 1.5),
-      ),
-      child: SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        activeThumbColor: AppColors.primary,
-        secondary: Text(icon, style: const TextStyle(fontSize: 18)),
-        title: Text(title,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary)),
-        subtitle: Text(subtitle,
-            style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-        value: value,
-        onChanged: onChanged,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border, width: 1.5),
+        ),
+        child: SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          activeThumbColor: AppColors.primary,
+          secondary: Text(icon, style: const TextStyle(fontSize: 18)),
+          title: Text(title,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary)),
+          subtitle: Text(subtitle,
+              style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+          value: value,
+          onChanged: onChanged,
+        ),
       ),
     );
   }

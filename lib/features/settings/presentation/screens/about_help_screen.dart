@@ -37,11 +37,10 @@ class AboutHelpScreen extends StatelessWidget {
           children: [
             _sectionLabel('FREQUENTLY ASKED'),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            Material(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: _faqs
                     .map((f) => ExpansionTile(
@@ -66,11 +65,10 @@ class AboutHelpScreen extends StatelessWidget {
             const SizedBox(height: 20),
             _sectionLabel('SUPPORT'),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            Material(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
               child: ListTile(
                 leading: const Text('✉️', style: TextStyle(fontSize: 16)),
                 title: const Text(_kSupportEmail,
@@ -88,11 +86,10 @@ class AboutHelpScreen extends StatelessWidget {
             const SizedBox(height: 20),
             _sectionLabel('LEGAL'),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            Material(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   ListTile(
