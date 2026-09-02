@@ -37,6 +37,16 @@ service cloud.firestore {
       }
     }
 
+    // Collection-group counterpart of the reviews rule above — needed
+    // separately because Firestore does not apply a nested subcollection
+    // rule to collectionGroup() queries; it requires its own explicit
+    // {path=**} match. Reviews are public read either way, so this just
+    // mirrors that. Powers "My Reviews" on Profile (query across every
+    // listing's reviews subcollection, filtered by userId).
+    match /{path=**}/reviews/{reviewId} {
+      allow read: if true;
+    }
+
     match /cart/{userId}/items/{itemId} {
       allow read, write: if isOwner(userId);
     }
