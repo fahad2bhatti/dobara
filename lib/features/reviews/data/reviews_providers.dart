@@ -39,6 +39,14 @@ final myReviewProvider = Provider.family<Review?, String>((ref, listingId) {
   return null;
 });
 
+/// All reviews written by the signed-in user, across every listing —
+/// used by the "Reviews" entry on their own Profile screen.
+final myReviewsStreamProvider = StreamProvider<List<Review>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null || user.isAnonymous) return const Stream.empty();
+  return ref.read(reviewsRepositoryProvider).watchMyReviews(user.uid);
+});
+
 class ReviewsActions extends Notifier<void> {
   @override
   void build() {}

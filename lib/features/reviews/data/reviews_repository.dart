@@ -23,4 +23,17 @@ class ReviewsRepository {
   Future<void> deleteReview(String listingId, String uid) {
     return _reviews(listingId).doc(uid).delete();
   }
+
+  /// All reviews the given user has written, across every listing —
+  /// powers the "Reviews" entry on their own Profile. Relies on the
+  /// `userId` field (duplicated onto every review doc) since a
+  /// collectionGroup query can't filter on doc id directly.
+  Stream<List<Review>> watchMyReviews(String uid) {
+    return _db
+        .collectionGroup('reviews')
+        .where('userId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => Review.fromDoc(d)).toList());
+  }
 }

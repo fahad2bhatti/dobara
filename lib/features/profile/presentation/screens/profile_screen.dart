@@ -5,9 +5,12 @@ import '../../../orders/presentation/screens/order_history_screen.dart';
 import '../../../admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../listings/presentation/screens/my_listings_screen.dart';
+import '../../../listings/presentation/screens/wishlist_screen.dart';
 import '../../../auth/domain/auth_provider.dart';
 import '../../../orders/domain/orders_provider.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
+import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../../reviews/presentation/screens/my_reviews_screen.dart';
 
 
 /// Buyer's own profile — stats card, "Become a Seller" upsell, menu.
@@ -205,6 +208,38 @@ class ProfileScreen extends ConsumerWidget {
                               builder: (_) => const AdminDashboardScreen(),
                             ),
                           );
+                        } else if (item[1] == 'Saved Items') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const WishlistScreen(),
+                            ),
+                          );
+                        } else if (item[1] == 'Reviews') {
+                          if (isSignedIn) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MyReviewsScreen(),
+                              ),
+                            );
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const LoginScreen()),
+                            );
+                          }
+                        } else if (item[1] == 'Notifications') {
+                          if (isSignedIn) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            );
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const LoginScreen()),
+                            );
+                          }
                         } else if (item[1] == 'Settings') {
                           Navigator.of(context).push(
                             MaterialPageRoute(
