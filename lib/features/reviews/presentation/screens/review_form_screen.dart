@@ -130,21 +130,9 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
                       letterSpacing: 1.4,
                       color: AppColors.textTertiary)),
               const SizedBox(height: 8),
-              Row(
-                children: List.generate(5, (i) {
-                  final filled = i < _rating;
-                  return GestureDetector(
-                    onTap: () => setState(() => _rating = i + 1),
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Icon(
-                        filled ? Icons.star_rounded : Icons.star_border_rounded,
-                        size: 34,
-                        color: filled ? const Color(0xFFF5A623) : AppColors.neutral300,
-                      ),
-                    ),
-                  );
-                }),
+              _StarPicker(
+                rating: _rating,
+                onChanged: (r) => setState(() => _rating = r),
               ),
               const SizedBox(height: 20),
 
@@ -290,6 +278,59 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Comfortable star rating input — tap any star to jump straight to
+/// that rating, or press-and-drag across the row to slide between
+/// values, like a real star-rating widget. Uses an opaque hit area
+/// per star (not just the visible star glyph) so taps near the edges
+/// still register.
+class _StarPicker extends StatelessWidget {
+  final int rating;
+  final ValueChanged<int> onChanged;
+
+  const _StarPicker({required this.rating, required this.onChanged});
+
+  static const double _starSize = 34;
+  static const double _boxSize = 44; // tap target, bigger than the glyph
+
+  void _updateFromLocalX(double dx, double totalWidth) {
+    final index = (dx / (totalWidth / 5)).floor().clamp(0, 4);
+    onChanged(index + 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const totalWidth = _boxSize * 5;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanDown: (details) =>
+          _updateFromLocalX(details.localPosition.dx, totalWidth),
+      onPanUpdate: (details) =>
+          _updateFromLocalX(details.localPosition.dx, totalWidth),
+      child: SizedBox(
+        width: totalWidth,
+        height: _boxSize,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(5, (i) {
+            final filled = i < rating;
+            return SizedBox(
+              width: _boxSize,
+              height: _boxSize,
+              child: Center(
+                child: Icon(
+                  filled ? Icons.star_rounded : Icons.star_border_rounded,
+                  size: _starSize,
+                  color: filled ? const Color(0xFFF5A623) : AppColors.neutral300,
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );

@@ -52,21 +52,33 @@ class MyReviewsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          ...List.generate(
-                            5,
-                            (star) => Icon(
-                              star < r.rating ? Icons.star : Icons.star_border,
-                              size: 15,
-                              color: AppColors.primary,
+                          Expanded(
+                            child: Text(
+                              r.userName,
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Spacer(),
                           Text(
                             '${r.createdAt.day}/${r.createdAt.month}/${r.createdAt.year}',
                             style: const TextStyle(
                                 fontSize: 11, color: AppColors.textTertiary),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: List.generate(
+                          5,
+                          (star) => Icon(
+                            star < r.rating ? Icons.star : Icons.star_border,
+                            size: 15,
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
                       if (r.comment.isNotEmpty) ...[
                         const SizedBox(height: 6),
@@ -94,6 +106,34 @@ class MyReviewsScreen extends ConsumerWidget {
                                 fit: BoxFit.cover,
                               ),
                             ),
+                          ),
+                        ),
+                      ],
+                      if (r.adminReply != null && r.adminReply!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border(
+                              left: BorderSide(color: AppColors.primary, width: 3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('SELLER REPLY',
+                                  style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1.2,
+                                      color: AppColors.textTertiary)),
+                              const SizedBox(height: 4),
+                              Text(r.adminReply!,
+                                  style: const TextStyle(
+                                      fontSize: 12, color: AppColors.textPrimary)),
+                            ],
                           ),
                         ),
                       ],

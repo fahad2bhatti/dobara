@@ -15,6 +15,8 @@ class Review {
   final String comment;
   final List<String> photoUrls;
   final DateTime createdAt;
+  final String? adminReply;
+  final DateTime? adminReplyAt;
 
   const Review({
     required this.id,
@@ -25,6 +27,8 @@ class Review {
     required this.comment,
     required this.photoUrls,
     required this.createdAt,
+    this.adminReply,
+    this.adminReplyAt,
   });
 
   Map<String, dynamic> toMap() => {
@@ -48,6 +52,8 @@ class Review {
       comment: map['comment'] ?? '',
       photoUrls: List<String>.from(map['photoUrls'] ?? const []),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      adminReply: map['adminReply'] as String?,
+      adminReplyAt: (map['adminReplyAt'] as Timestamp?)?.toDate(),
     );
   }
 }

@@ -32,7 +32,11 @@ service cloud.firestore {
 
       match /reviews/{userId} {
         allow read: if true;
-        allow create, update: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId;
+        // Owner can edit their own review; admin can update too, so
+        // they can attach a seller reply (adminReply/adminReplyAt)
+        // without needing a separate collection just for replies.
+        allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
         allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       }
     }

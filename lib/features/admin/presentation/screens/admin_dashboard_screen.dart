@@ -6,6 +6,7 @@ import '../../domain/reports_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/users_provider.dart';
 import '../../../listings/domain/listings_provider.dart';
+import '../../../reviews/data/reviews_providers.dart';
 
 /// Admin dashboard — basic metrics + moderation entry points (Doc 5 §22).
 /// TODO Phase 10/11: gate this screen behind an admin role check once
@@ -20,6 +21,7 @@ class AdminDashboardScreen extends ConsumerWidget {
     final reports = ref.watch(reportsStreamProvider).asData?.value ?? const [];
     final usersAsync = ref.watch(usersStreamProvider);
     final listingsAsync = ref.watch(listingsStreamProvider);
+    final reviewsAsync = ref.watch(allReviewsStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -103,6 +105,15 @@ class AdminDashboardScreen extends ConsumerWidget {
                 trailing: '${usersAsync.asData?.value.length ?? 0}', // ADD
                 onTap: () => context.push('/admin/users'),           // ADD
               ),                                                    // ADD
+
+              const SizedBox(height: 8),
+              _menuRow(
+                context,
+                icon: Icons.star_outline,
+                label: 'Reviews',
+                trailing: '${reviewsAsync.asData?.value.length ?? 0}',
+                onTap: () => context.push('/admin/reviews'),
+              ),
             ],
           ),
         ),

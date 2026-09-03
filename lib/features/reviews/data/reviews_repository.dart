@@ -36,4 +36,24 @@ class ReviewsRepository {
         .snapshots()
         .map((snap) => snap.docs.map((d) => Review.fromDoc(d)).toList());
   }
+
+  /// Every review on the platform, across every listing, newest first —
+  /// powers the admin "Reviews" moderation screen.
+  Stream<List<Review>> watchAllReviews() {
+    return _db
+        .collectionGroup('reviews')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => Review.fromDoc(d)).toList());
+  }
+
+  /// Admin-only — writes/updates the seller's reply under a review.
+  /// reviewId == the reviewer's uid (doc id in the reviews subcollection).
+  Future<void> submitAdminReply(
+      String listingId, String reviewId, String reply) {
+    return _reviews(listingId).doc(reviewId).update({
+      'adminReply': reply,
+      'adminReplyAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

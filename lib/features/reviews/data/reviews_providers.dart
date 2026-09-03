@@ -47,6 +47,12 @@ final myReviewsStreamProvider = StreamProvider<List<Review>>((ref) {
   return ref.read(reviewsRepositoryProvider).watchMyReviews(user.uid);
 });
 
+/// Every review on the platform, newest first — used by the admin
+/// "Reviews" moderation screen.
+final allReviewsStreamProvider = StreamProvider<List<Review>>((ref) {
+  return ref.read(reviewsRepositoryProvider).watchAllReviews();
+});
+
 class ReviewsActions extends Notifier<void> {
   @override
   void build() {}
@@ -65,6 +71,18 @@ class ReviewsActions extends Notifier<void> {
       throw Exception('You must be signed in to delete a review.');
     }
     await ref.read(reviewsRepositoryProvider).deleteReview(listingId, user.uid);
+  }
+
+  /// Admin-only — reply to a review as the seller.
+  Future<void> submitAdminReply(
+      String listingId, String reviewId, String reply) async {
+    final isAdmin = ref.read(isAdminProvider);
+    if (!isAdmin) {
+      throw Exception('Only admins can reply to reviews.');
+    }
+    await ref
+        .read(reviewsRepositoryProvider)
+        .submitAdminReply(listingId, reviewId, reply);
   }
 }
 

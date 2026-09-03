@@ -83,10 +83,25 @@ class ListingsRepository {
   Future<void> updateListing(String listingId, Map<String, dynamic> fields) {
     return _listingsCollection.doc(listingId).update(fields);
   }
+
+  /// Single listing by id — used where only a listingId is on hand
+  /// (e.g. showing "on: <product name>" against a review).
+  Future<Product?> getListing(String listingId) async {
+    final doc = await _listingsCollection.doc(listingId).get();
+    if (!doc.exists) return null;
+    return Product.fromDoc(doc);
+  }
 }
 
 final listingsRepositoryProvider = Provider<ListingsRepository>((ref) {
   return ListingsRepository(ref.watch(storageServiceProvider));
+});
+
+/// Fetches one listing by id — used to show "on: <product name>"
+/// against a review, which only stores the listingId.
+final listingByIdProvider =
+FutureProvider.family<Product?, String>((ref, listingId) {
+  return ref.watch(listingsRepositoryProvider).getListing(listingId);
 });
 
 class ListingsActions extends Notifier<void> {              // ADD FROM HERE

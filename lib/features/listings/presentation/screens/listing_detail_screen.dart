@@ -729,6 +729,34 @@ class _ReviewsSection extends ConsumerWidget {
               ),
             ),
           ],
+          if (r.adminReply != null && r.adminReply!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border(
+                  left: BorderSide(color: AppColors.primary, width: 3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('SELLER REPLY',
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                          color: AppColors.textTertiary)),
+                  const SizedBox(height: 4),
+                  Text(r.adminReply!,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textPrimary, height: 1.4)),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
