@@ -114,6 +114,15 @@ class AdminDashboardScreen extends ConsumerWidget {
                 trailing: '${reviewsAsync.asData?.value.length ?? 0}',
                 onTap: () => context.push('/admin/reviews'),
               ),
+
+              const SizedBox(height: 8),
+              _menuRow(
+                context,
+                icon: Icons.bar_chart_outlined,
+                label: 'Analytics',
+                trailing: null,
+                onTap: () => context.push('/admin/analytics'),
+              ),
             ],
           ),
         ),

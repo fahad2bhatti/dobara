@@ -30,6 +30,7 @@ import '../../features/admin/presentation/screens/users_list_screen.dart';
 import '../../features/admin/presentation/screens/admin_orders_screen.dart';
 import '../../features/admin/presentation/screens/admin_order_update_screen.dart';
 import '../../features/admin/presentation/screens/all_reviews_screen.dart';
+import '../../features/admin/presentation/screens/admin_analytics_screen.dart';
 import '../../features/reviews/presentation/screens/review_form_screen.dart';
 import '../../shared/models/review_model.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -239,6 +240,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'reviews',
             builder: (context, state) => const AllReviewsScreen(),
+          ),
+          GoRoute(
+            path: 'analytics',
+            builder: (context, state) => const AdminAnalyticsScreen(),
           ),
           GoRoute(
             path: 'orders',
