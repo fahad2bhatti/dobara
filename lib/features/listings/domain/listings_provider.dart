@@ -91,6 +91,17 @@ class ListingsRepository {
     if (!doc.exists) return null;
     return Product.fromDoc(doc);
   }
+
+  /// Fire-and-forget view counter — called once when a buyer opens a
+  /// listing's detail screen. Powers the "Most Viewed" analytics stat.
+  /// Uses FieldValue.increment so concurrent views never race/clobber
+  /// each other. Firestore rules restrict this to viewCount-only,
+  /// increment-by-exactly-one updates — see firestore.rules.
+  Future<void> incrementViewCount(String listingId) {
+    return _listingsCollection.doc(listingId).update({
+      'viewCount': FieldValue.increment(1),
+    });
+  }
 }
 
 final listingsRepositoryProvider = Provider<ListingsRepository>((ref) {
@@ -118,6 +129,16 @@ class ListingsActions extends Notifier<void> {              // ADD FROM HERE
 
   Future<void> setSoldOut(String listingId, bool soldOut) {
     return updateListing(listingId, {'isSoldOut': soldOut});
+  }
+
+  /// Called once per Listing Detail open. Swallows errors deliberately —
+  /// a failed view-count bump should never block or interrupt browsing.
+  Future<void> recordView(String listingId) async {
+    try {
+      await ref.read(listingsRepositoryProvider).incrementViewCount(listingId);
+    } catch (_) {
+      // best-effort only
+    }
   }
 }
 

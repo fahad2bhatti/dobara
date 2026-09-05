@@ -9,6 +9,7 @@ import '../../../../shared/widgets/image_zoom_viewer.dart';
 import '../../../cart/data/cart_providers.dart';
 import '../../../../shared/models/report_model.dart';
 import '../../../wishlist/data/wishlist_providers.dart';
+import '../../domain/listings_provider.dart';
 import '../widgets/report_sheet.dart';
 import '../../../checkout/presentation/screens/checkout_screen.dart';
 import '../../../reviews/data/reviews_providers.dart';
@@ -29,6 +30,18 @@ class ListingDetailScreen extends ConsumerStatefulWidget {
 class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
   int _imgIdx = 0;
   final PageController _pageController = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Fire once per screen open, after the first frame so it never
+    // delays the initial render.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !ref.read(isAdminProvider)) {
+        ref.read(listingsActionsProvider.notifier).recordView(widget.product.id);
+      }
+    });
+  }
 
   List<String> get _images {
     final p = widget.product;
