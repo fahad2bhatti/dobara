@@ -94,3 +94,106 @@ final orderStatusBreakdownProvider = Provider<Map<OrderStatus, int>>((ref) {
   }
   return breakdown;
 });
+
+// ── Phase 3 — daily & monthly sales charts ────────────────────────
+//
+// Both charts are bucketed by `placedAt` (the day the order was made),
+// not `statusUpdatedAt` — kept consistent with how Phase 2 already
+// treats a delivered order's date. Every bucket in the window is
+// present even at zero revenue, which is the whole point of the
+// "which days had no sales" view the charts are for.
+
+/// One day's revenue point for the daily sales chart. Carries order
+/// count and items sold too, so tapping/jumping to a specific day can
+/// show a full breakdown, not just the revenue number.
+class DailySalesPoint {
+  final DateTime day; // midnight, local
+  final int revenue;
+  final int orderCount;
+  final int itemsSold;
+  const DailySalesPoint(this.day, this.revenue, this.orderCount, this.itemsSold);
+}
+
+/// One month's revenue point for the monthly sales chart.
+class MonthlySalesPoint {
+  final DateTime monthStart; // 1st of the month, local
+  final int revenue;
+  const MonthlySalesPoint(this.monthStart, this.revenue);
+}
+
+const int dailyChartWindowDays = 14;
+const int monthlyChartWindowMonths = 6;
+
+/// Every day's stats from the very first delivered order up to today,
+/// oldest first — one point per calendar day even for days with zero
+/// sales. This backs the scrollable chart + "jump to a date" lookup,
+/// so admin can inspect any day in the store's history, not just a
+/// fixed recent window.
+final dailySalesHistoryProvider = Provider<List<DailySalesPoint>>((ref) {
+  final delivered = ref.watch(_deliveredOrdersProvider);
+  final today = DateTime.now();
+  final todayMidnight = DateTime(today.year, today.month, today.day);
+
+  if (delivered.isEmpty) {
+    // No sales history at all yet — still show a short recent window
+    // rather than a single empty day, so the chart isn't jarring.
+    return List.generate(dailyChartWindowDays, (i) {
+      final day = todayMidnight.subtract(Duration(days: dailyChartWindowDays - 1 - i));
+      return DailySalesPoint(day, 0, 0, 0);
+    });
+  }
+
+  final revenueByDay = <DateTime, int>{};
+  final ordersByDay = <DateTime, int>{};
+  final itemsByDay = <DateTime, int>{};
+  DateTime earliest = todayMidnight;
+  for (final o in delivered) {
+    final d = DateTime(o.placedAt.year, o.placedAt.month, o.placedAt.day);
+    revenueByDay[d] = (revenueByDay[d] ?? 0) + o.total;
+    ordersByDay[d] = (ordersByDay[d] ?? 0) + 1;
+    itemsByDay[d] = (itemsByDay[d] ?? 0) +
+        o.items.fold<int>(0, (s, item) => s + item.quantity);
+    if (d.isBefore(earliest)) earliest = d;
+  }
+
+  final totalDays = todayMidnight.difference(earliest).inDays + 1;
+  return List.generate(totalDays, (i) {
+    final day = earliest.add(Duration(days: i));
+    return DailySalesPoint(
+      day,
+      revenueByDay[day] ?? 0,
+      ordersByDay[day] ?? 0,
+      itemsByDay[day] ?? 0,
+    );
+  });
+});
+
+/// Last 14 days only — a simple slice of the full history above, kept
+/// as the chart's default/collapsed view.
+final dailySalesProvider = Provider<List<DailySalesPoint>>((ref) {
+  final history = ref.watch(dailySalesHistoryProvider);
+  if (history.length <= dailyChartWindowDays) return history;
+  return history.sublist(history.length - dailyChartWindowDays);
+});
+
+/// Last 6 months of revenue, oldest first, current month included — one
+/// point per calendar month even if that month had zero revenue.
+final monthlySalesProvider = Provider<List<MonthlySalesPoint>>((ref) {
+  final delivered = ref.watch(_deliveredOrdersProvider);
+  final now = DateTime.now();
+
+  final revenueByMonth = <DateTime, int>{};
+  for (final o in delivered) {
+    final m = DateTime(o.placedAt.year, o.placedAt.month);
+    revenueByMonth[m] = (revenueByMonth[m] ?? 0) + o.total;
+  }
+
+  return List.generate(monthlyChartWindowMonths, (i) {
+    // Subtracting months by day-count would drift across different
+    // month lengths, so step via year/month arithmetic instead.
+    final monthsAgo = monthlyChartWindowMonths - 1 - i;
+    final totalMonthIndex = now.year * 12 + (now.month - 1) - monthsAgo;
+    final monthStart = DateTime(totalMonthIndex ~/ 12, totalMonthIndex % 12 + 1);
+    return MonthlySalesPoint(monthStart, revenueByMonth[monthStart] ?? 0);
+  });
+});
