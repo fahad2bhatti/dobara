@@ -93,6 +93,47 @@ class AdminAnalyticsScreen extends ConsumerWidget {
               const _SectionLabel('Monthly Sales — Last 6 Months'),
               const SizedBox(height: 10),
               _MonthlySalesChart(points: ref.watch(monthlySalesProvider)),
+              const SizedBox(height: 24),
+              const _SectionLabel('Top-Selling Listings'),
+              const SizedBox(height: 10),
+              _TopListCard(
+                emptyText: 'No sales yet.',
+                items: [
+                  for (final s in ref.watch(topSellingListingsProvider))
+                    _TopListItem(
+                      title: s.name,
+                      value: '${s.quantitySold} sold',
+                      subtitle: 'Rs ${_formatMoney(s.revenue)}',
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const _SectionLabel('Top Categories'),
+              const SizedBox(height: 10),
+              _TopListCard(
+                emptyText: 'No sales yet.',
+                items: [
+                  for (final s in ref.watch(topSellingCategoriesProvider))
+                    _TopListItem(
+                      title: s.category,
+                      value: '${s.quantitySold} sold',
+                      subtitle: 'Rs ${_formatMoney(s.revenue)}',
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const _SectionLabel('Most Viewed Listings'),
+              const SizedBox(height: 10),
+              _TopListCard(
+                emptyText: 'No views yet.',
+                items: [
+                  for (final p in ref.watch(mostViewedListingsProvider).take(topPerformersLimit))
+                    _TopListItem(
+                      title: p.name,
+                      value: '${p.viewCount} view${p.viewCount == 1 ? '' : 's'}',
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -631,6 +672,117 @@ class _MonthlySalesChart extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A single row's data for _TopListCard — a rank, a title, a right-
+/// aligned primary value, and an optional secondary line underneath
+/// the title (e.g. revenue under a "N sold" count).
+class _TopListItem {
+  final String title;
+  final String value;
+  final String? subtitle;
+  const _TopListItem({required this.title, required this.value, this.subtitle});
+}
+
+/// Numbered ranking card reused for Top-Selling Listings, Top
+/// Categories, and Most Viewed Listings — same shape, different data.
+class _TopListCard extends StatelessWidget {
+  final List<_TopListItem> items;
+  final String emptyText;
+
+  const _TopListCard({required this.items, required this.emptyText});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 5,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: items.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                emptyText,
+                style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+              ),
+            )
+          : Column(
+              children: [
+                for (int i = 0; i < items.length; i++) ...[
+                  if (i > 0) const Divider(height: 1, color: AppColors.divider),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColors.muted,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${i + 1}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                items[i].title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              if (items[i].subtitle != null)
+                                Text(
+                                  items[i].subtitle!,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          items[i].value,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
     );
   }
 }

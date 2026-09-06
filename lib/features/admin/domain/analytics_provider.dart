@@ -197,3 +197,108 @@ final monthlySalesProvider = Provider<List<MonthlySalesPoint>>((ref) {
     return MonthlySalesPoint(monthStart, revenueByMonth[monthStart] ?? 0);
   });
 });
+
+// ── Phase 4 — top performers ──────────────────────────────────────
+//
+// "Top-selling" is always by quantity sold, not revenue, since a
+// single expensive item outselling ten cheap ones by revenue alone
+// would be misleading in a "what's popular" ranking.
+
+const int topPerformersLimit = 5;
+
+/// A single listing's sales performance.
+class ListingSalesStat {
+  final String listingId;
+  final String name;
+  final int quantitySold;
+  final int revenue;
+  const ListingSalesStat({
+    required this.listingId,
+    required this.name,
+    required this.quantitySold,
+    required this.revenue,
+  });
+}
+
+/// A single category's sales performance.
+class CategorySalesStat {
+  final String category;
+  final int quantitySold;
+  final int revenue;
+  const CategorySalesStat({
+    required this.category,
+    required this.quantitySold,
+    required this.revenue,
+  });
+}
+
+/// Top 5 listings by quantity sold, from delivered orders. Uses the
+/// name frozen on the order item itself (not a live listing lookup),
+/// so a listing that's since been edited or deleted still shows
+/// correctly under the name it had when it sold.
+final topSellingListingsProvider = Provider<List<ListingSalesStat>>((ref) {
+  final isAdmin = ref.watch(isAdminProvider);
+  if (!isAdmin) return const [];
+
+  final delivered = ref.watch(_deliveredOrdersProvider);
+  final qtyByListing = <String, int>{};
+  final revenueByListing = <String, int>{};
+  final nameByListing = <String, String>{};
+
+  for (final o in delivered) {
+    for (final item in o.items) {
+      qtyByListing[item.listingId] = (qtyByListing[item.listingId] ?? 0) + item.quantity;
+      revenueByListing[item.listingId] = (revenueByListing[item.listingId] ?? 0) + item.subtotal;
+      nameByListing.putIfAbsent(item.listingId, () => item.name);
+    }
+  }
+
+  final stats = qtyByListing.entries
+      .map((e) => ListingSalesStat(
+            listingId: e.key,
+            name: nameByListing[e.key] ?? 'Unknown listing',
+            quantitySold: e.value,
+            revenue: revenueByListing[e.key] ?? 0,
+          ))
+      .toList()
+    ..sort((a, b) => b.quantitySold.compareTo(a.quantitySold));
+
+  return stats.take(topPerformersLimit).toList();
+});
+
+/// Top 5 categories by quantity sold. Joins each sold order item back
+/// to its listing's *current* category via listingsStreamProvider — an
+/// item whose listing has since been deleted can't be categorised and
+/// is simply left out of this particular ranking (it's still counted
+/// in totalItemsSold/totalRevenue elsewhere).
+final topSellingCategoriesProvider = Provider<List<CategorySalesStat>>((ref) {
+  final isAdmin = ref.watch(isAdminProvider);
+  if (!isAdmin) return const [];
+
+  final delivered = ref.watch(_deliveredOrdersProvider);
+  final listings = ref.watch(listingsStreamProvider).asData?.value ?? const [];
+  final categoryByListingId = {for (final l in listings) l.id: l.category};
+
+  final qtyByCategory = <String, int>{};
+  final revenueByCategory = <String, int>{};
+
+  for (final o in delivered) {
+    for (final item in o.items) {
+      final category = categoryByListingId[item.listingId];
+      if (category == null) continue;
+      qtyByCategory[category] = (qtyByCategory[category] ?? 0) + item.quantity;
+      revenueByCategory[category] = (revenueByCategory[category] ?? 0) + item.subtotal;
+    }
+  }
+
+  final stats = qtyByCategory.entries
+      .map((e) => CategorySalesStat(
+            category: e.key,
+            quantitySold: e.value,
+            revenue: revenueByCategory[e.key] ?? 0,
+          ))
+      .toList()
+    ..sort((a, b) => b.quantitySold.compareTo(a.quantitySold));
+
+  return stats.take(topPerformersLimit).toList();
+});

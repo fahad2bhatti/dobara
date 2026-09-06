@@ -269,6 +269,26 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                               ),
                             ],
                           ),
+                          if (p.viewCount > 0) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.visibility_outlined,
+                                  size: 14,
+                                  color: AppColors.textTertiary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${p.viewCount} ${p.viewCount == 1 ? 'person has' : 'people have'} viewed this',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 16),
 
                           // Condition panel
