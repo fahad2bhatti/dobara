@@ -134,6 +134,56 @@ class AdminAnalyticsScreen extends ConsumerWidget {
                     ),
                 ],
               ),
+              const SizedBox(height: 24),
+              const _SectionLabel('Customer Insights'),
+              const SizedBox(height: 10),
+              Builder(builder: (context) {
+                final insights = ref.watch(customerInsightsProvider);
+                return SizedBox(
+                  height: 100,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          label: 'New Customers',
+                          value: '${insights.newCustomers}',
+                          icon: Icons.person_add_alt_outlined,
+                          color: AppColors.successText,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _StatCard(
+                          label: 'Returning Customers',
+                          value: '${insights.returningCustomers}',
+                          icon: Icons.repeat_outlined,
+                          color: const Color(0xFF0B3A6E),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 16),
+              const Text(
+                'City-wise Orders',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _TopListCard(
+                emptyText: 'No delivered orders yet.',
+                items: [
+                  for (final c in ref.watch(cityDistributionProvider))
+                    _TopListItem(
+                      title: c.city,
+                      value: '${c.orderCount} order${c.orderCount == 1 ? '' : 's'}',
+                    ),
+                ],
+              ),
             ],
           ),
         ),

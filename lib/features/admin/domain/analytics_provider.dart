@@ -302,3 +302,66 @@ final topSellingCategoriesProvider = Provider<List<CategorySalesStat>>((ref) {
 
   return stats.take(topPerformersLimit).toList();
 });
+
+// ── Phase 5 — customer insights ───────────────────────────────────
+
+/// New vs returning buyers, counted by delivered-order history: a
+/// buyer with exactly one delivered order is "new", more than one is
+/// "returning". A buyer with zero delivered orders (only
+/// pending/cancelled ones) isn't counted as a customer yet either way.
+class CustomerInsights {
+  final int newCustomers;
+  final int returningCustomers;
+  const CustomerInsights({required this.newCustomers, required this.returningCustomers});
+  int get totalCustomers => newCustomers + returningCustomers;
+}
+
+final customerInsightsProvider = Provider<CustomerInsights>((ref) {
+  final isAdmin = ref.watch(isAdminProvider);
+  if (!isAdmin) return const CustomerInsights(newCustomers: 0, returningCustomers: 0);
+
+  final delivered = ref.watch(_deliveredOrdersProvider);
+  final deliveredOrdersByBuyer = <String, int>{};
+  for (final o in delivered) {
+    deliveredOrdersByBuyer[o.buyerId] = (deliveredOrdersByBuyer[o.buyerId] ?? 0) + 1;
+  }
+
+  int newCount = 0;
+  int returningCount = 0;
+  for (final count in deliveredOrdersByBuyer.values) {
+    if (count == 1) {
+      newCount++;
+    } else {
+      returningCount++;
+    }
+  }
+  return CustomerInsights(newCustomers: newCount, returningCustomers: returningCount);
+});
+
+/// A city's share of delivered orders.
+class CityOrderStat {
+  final String city;
+  final int orderCount;
+  const CityOrderStat({required this.city, required this.orderCount});
+}
+
+/// Every city that has at least one delivered order, most orders
+/// first. Uses the order's delivery-address city (frozen at order
+/// time), not the buyer's profile — matches what actually shipped.
+final cityDistributionProvider = Provider<List<CityOrderStat>>((ref) {
+  final isAdmin = ref.watch(isAdminProvider);
+  if (!isAdmin) return const [];
+
+  final delivered = ref.watch(_deliveredOrdersProvider);
+  final countByCity = <String, int>{};
+  for (final o in delivered) {
+    final city = o.city.trim().isEmpty ? 'Unknown' : o.city.trim();
+    countByCity[city] = (countByCity[city] ?? 0) + 1;
+  }
+
+  final stats = countByCity.entries
+      .map((e) => CityOrderStat(city: e.key, orderCount: e.value))
+      .toList()
+    ..sort((a, b) => b.orderCount.compareTo(a.orderCount));
+  return stats;
+});
