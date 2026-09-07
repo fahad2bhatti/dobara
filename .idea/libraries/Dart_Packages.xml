@@ -170,6 +170,27 @@
             </list>
           </value>
         </entry>
+        <entry key="cloud_functions">
+          <value>
+            <list>
+              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions-6.4.0/lib" />
+            </list>
+          </value>
+        </entry>
+        <entry key="cloud_functions_platform_interface">
+          <value>
+            <list>
+              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions_platform_interface-6.0.7/lib" />
+            </list>
+          </value>
+        </entry>
+        <entry key="cloud_functions_web">
+          <value>
+            <list>
+              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions_web-5.1.13/lib" />
+            </list>
+          </value>
+        </entry>
         <entry key="code_assets">
           <value>
             <list>
@@ -327,21 +348,21 @@
         <entry key="firebase_core">
           <value>
             <list>
-              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core-4.13.0/lib" />
+              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core-4.14.0/lib" />
             </list>
           </value>
         </entry>
         <entry key="firebase_core_platform_interface">
           <value>
             <list>
-              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_platform_interface-8.1.0/lib" />
+              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_platform_interface-8.1.1/lib" />
             </list>
           </value>
         </entry>
         <entry key="firebase_core_web">
           <value>
             <list>
-              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_web-3.10.0/lib" />
+              <option value="$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_web-3.11.0/lib" />
             </list>
           </value>
         </entry>
@@ -1107,6 +1128,9 @@
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_firestore-6.8.0/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_firestore_platform_interface-8.0.6/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_firestore_web-5.7.2/lib" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions-6.4.0/lib" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions_platform_interface-6.0.7/lib" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions_web-5.1.13/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/code_assets-1.2.1/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/code_builder-4.11.1/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/collection-1.19.1/lib" />
@@ -1129,9 +1153,9 @@
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_auth-6.5.7/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_auth_platform_interface-9.0.6/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_auth_web-6.2.6/lib" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core-4.13.0/lib" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_platform_interface-8.1.0/lib" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_web-3.10.0/lib" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core-4.14.0/lib" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_platform_interface-8.1.1/lib" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_web-3.11.0/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_messaging-16.5.0/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_messaging_platform_interface-4.9.3/lib" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_messaging_web-4.2.4/lib" />

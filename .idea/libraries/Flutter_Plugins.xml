@@ -12,14 +12,12 @@
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.3+1" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/jni-1.0.3" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/flutter_secure_storage_windows-4.2.2" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core-4.13.0" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_messaging_web-4.2.4" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_auth_web-6.2.6" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/sqflite-2.4.3" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/path_provider_foundation-2.6.0" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/flutter_secure_storage-11.0.0" />
-      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_web-3.10.0" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_firestore-6.8.0" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/path_provider_linux-2.2.2" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/image_picker-1.2.3" />
@@ -32,6 +30,10 @@
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/file_selector_macos-0.9.5" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/file_selector_linux-0.9.4" />
       <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/image_picker_android-0.8.13+19" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions_web-5.1.13" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/cloud_functions-6.4.0" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core_web-3.11.0" />
+      <root url="file://$PROJECT_DIR$/../.pub-cache/hosted/pub.dev/firebase_core-4.14.0" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
