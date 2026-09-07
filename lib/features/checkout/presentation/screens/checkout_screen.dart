@@ -134,24 +134,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     setState(() => _placing = true);
 
-    final subtotal = orderItems.fold<int>(0, (sum, i) => sum + i.subtotal);
-    final order = Order(
-      id: '', // assigned by Firestore on write
-      buyerId: user.uid,
-      items: orderItems,
-      subtotal: subtotal,
-      deliveryFee: _kDeliveryFee,
-      total: subtotal + _kDeliveryFee,
-      customerName: _nameController.text.trim(),
-      phone: _phoneController.text.trim(),
-      address: _addressController.text.trim(),
-      city: _cityController.text.trim(),
-      status: OrderStatus.placed,
-      placedAt: DateTime.now(), // local placeholder; toMap() writes the real server value
-    );
+    // Only listingId + quantity are sent — the placeOrder Cloud Function
+    // looks up the real price/name/image/seller from each listing doc
+    // server-side, so a client can never submit a tampered price.
+    final items = orderItems
+        .map((i) => {'listingId': i.listingId, 'quantity': i.quantity})
+        .toList();
 
     try {
-      await ref.read(ordersActionsProvider.notifier).placeOrder(order);
+      await ref.read(ordersActionsProvider.notifier).placeOrder(
+        items: items,
+        customerName: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        city: _cityController.text.trim(),
+      );
 
       // Buy Now never wrote to the cart, so there's nothing to clear.
       if (!_isBuyNow) {

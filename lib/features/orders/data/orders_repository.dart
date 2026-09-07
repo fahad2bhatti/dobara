@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
+import 'package:cloud_functions/cloud_functions.dart';
 import '../../../shared/models/order_model.dart';
 
 class OrdersRepository {
   final _db = FirebaseFirestore.instance;
+  final _functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
 
   CollectionReference<Map<String, dynamic>> get _orders =>
       _db.collection('orders');
@@ -26,9 +28,28 @@ class OrdersRepository {
         .map((snap) => snap.docs.map((doc) => Order.fromDoc(doc)).toList());
   }
 
-  Future<String> placeOrder(Order order) async {
-    final doc = await _orders.add(order.toMap());
-    return doc.id;
+  /// Places an order via the `placeOrder` Cloud Function instead of
+  /// writing to Firestore directly. Only (listingId, quantity) + the
+  /// delivery details are sent — price, name, image, and seller are all
+  /// looked up server-side from the real listing docs, so nothing here
+  /// can be tampered with client-side. `firestore.rules` backs this up
+  /// by denying direct client `create`s on /orders.
+  Future<String> placeOrder({
+    required List<Map<String, dynamic>> items,
+    required String customerName,
+    required String phone,
+    required String address,
+    required String city,
+  }) async {
+    final callable = _functions.httpsCallable('placeOrder');
+    final result = await callable.call<Map<String, dynamic>>({
+      'items': items,
+      'customerName': customerName,
+      'phone': phone,
+      'address': address,
+      'city': city,
+    });
+    return result.data['orderId'] as String;
   }
 
   /// Admin status update — status is required, tracking/courier are

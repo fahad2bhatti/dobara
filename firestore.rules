@@ -18,9 +18,21 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn();
+      // Full profile doc holds email + phone, so only the owner and
+      // admins can read it. Everywhere else in the app (seller info on
+      // listings, reviewer name) uses a denormalized copy, not this
+      // doc, so this doesn't break anything else.
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      // Owner can edit their own profile, but NOT role or isBanned —
+      // those fields must stay unchanged unless an admin is writing.
+      // Without this, any signed-in user could set role:'admin' on
+      // their own doc and self-promote, or clear isBanned to un-ban
+      // themselves.
+      allow update: if (isOwner(userId) &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.isBanned == resource.data.isBanned) ||
+        isAdmin();
       allow delete: if isOwner(userId) || isAdmin();
     }
 
@@ -83,7 +95,12 @@ service cloud.firestore {
       // the whole list, not just the admin branch.
       allow read: if isSignedIn() && resource.data.buyerId == request.auth.uid;
       allow read: if isAdmin();
-      allow create: if isSignedIn() && request.resource.data.buyerId == request.auth.uid;
+      // Orders are created ONLY by the placeOrder Cloud Function (Admin
+      // SDK, which bypasses these rules) — never directly by the client.
+      // A direct client write would let a buyer set item price/quantity
+      // to whatever they want, since nothing here can check that against
+      // the real listing price.
+      allow create: if false;
       allow update: if isAdmin();
       allow delete: if false;
     }

@@ -61,8 +61,23 @@ class OrdersActions extends Notifier<void> {
   @override
   void build() {}
 
-  Future<String> placeOrder(Order order) {
-    return ref.read(ordersRepositoryProvider).placeOrder(order);
+  /// [items] is just [{listingId, quantity}] per cart line — no price,
+  /// since the server (placeOrder Cloud Function) computes that from the
+  /// live listing docs. See OrdersRepository.placeOrder for why.
+  Future<String> placeOrder({
+    required List<Map<String, dynamic>> items,
+    required String customerName,
+    required String phone,
+    required String address,
+    required String city,
+  }) {
+    return ref.read(ordersRepositoryProvider).placeOrder(
+      items: items,
+      customerName: customerName,
+      phone: phone,
+      address: address,
+      city: city,
+    );
   }
 
   Future<void> updateStatus(String orderId, OrderStatus status) {
