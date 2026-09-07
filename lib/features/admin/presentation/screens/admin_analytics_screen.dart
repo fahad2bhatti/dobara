@@ -184,6 +184,10 @@ class AdminAnalyticsScreen extends ConsumerWidget {
                     ),
                 ],
               ),
+              const SizedBox(height: 24),
+              const _SectionLabel('Monthly Summary'),
+              const SizedBox(height: 10),
+              _MonthlySummaryCard(summary: ref.watch(monthlySummaryProvider)),
             ],
           ),
         ),
@@ -498,7 +502,7 @@ class _DailySalesChartState extends State<_DailySalesChart> {
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
                         getTooltipColor: (_) => AppColors.primary,
-                        getTooltipItem: (group, _, rod, __) {
+                        getTooltipItem: (group, _, rod, _) {
                           final p = points[group.x.toInt()];
                           return BarTooltipItem(
                             'Rs ${_formatMoney(p.revenue)}\n',
@@ -833,6 +837,134 @@ class _TopListCard extends StatelessWidget {
                 ],
               ],
             ),
+    );
+  }
+}
+
+/// End-of-month-style digest: headline numbers for the current month,
+/// the standout day and item, comparison vs last month, and one
+/// rule-based suggestion. Visually distinct (accent-tinted) from the
+/// other cards so it reads as a summary/conclusion, not just another
+/// stat block.
+class _MonthlySummaryCard extends StatelessWidget {
+  final MonthlySummary? summary;
+  const _MonthlySummaryCard({required this.summary});
+
+  static const _monthLabels = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  static const _weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  @override
+  Widget build(BuildContext context) {
+    final s = summary;
+    if (s == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${_monthLabels[s.month.month - 1]} ${s.month.year} — So Far',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryForeground,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (s.totalOrders == 0)
+            Text(
+              'No delivered orders yet this month.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.primaryForeground.withValues(alpha: 0.85),
+                height: 1.5,
+              ),
+            )
+          else ...[
+            _summaryLine('Revenue this month', 'Rs ${_formatMoney(s.totalRevenue)}'),
+            _summaryLine('Orders · Items sold', '${s.totalOrders} · ${s.totalItemsSold}'),
+            if (s.bestDay != null)
+              _summaryLine(
+                'Best day',
+                '${_weekdayLabels[s.bestDay!.weekday - 1]}, ${s.bestDay!.day}/${s.bestDay!.month} '
+                    '— Rs ${_formatMoney(s.bestDayRevenue)}',
+              ),
+            if (s.bestSellingItemName != null)
+              _summaryLine(
+                'Best-selling item',
+                '${s.bestSellingItemName} (${s.bestSellingItemQty} sold)',
+              ),
+            _summaryLine(
+              'Vs last month',
+              s.revenueChangePercent == null
+                  ? 'No comparison yet'
+                  : '${s.revenueChangePercent! >= 0 ? '+' : ''}${s.revenueChangePercent!.round()}%',
+            ),
+          ],
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryForeground.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.lightbulb_outline, size: 16, color: AppColors.accentForeground),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    s.suggestion,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primaryForeground,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryLine(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.primaryForeground.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryForeground,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

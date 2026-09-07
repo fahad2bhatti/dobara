@@ -365,3 +365,143 @@ final cityDistributionProvider = Provider<List<CityOrderStat>>((ref) {
     ..sort((a, b) => b.orderCount.compareTo(a.orderCount));
   return stats;
 });
+
+// ── Phase 6 — monthly summary + suggestion ────────────────────────
+//
+// A single end-of-month-style digest: this month's headline numbers,
+// the standout day and item, how it compares to last month, and one
+// rule-based suggestion. The rules are deliberately simple (revenue
+// trend first, then weekday-vs-weekend pattern) rather than anything
+// resembling real forecasting — it's a nudge, not a prediction.
+
+class MonthlySummary {
+  final DateTime month;
+  final int totalRevenue;
+  final int totalOrders;
+  final int totalItemsSold;
+  final DateTime? bestDay;
+  final int bestDayRevenue;
+  final String? bestSellingItemName;
+  final int bestSellingItemQty;
+  /// null when last month had zero revenue — a % change from zero is
+  /// meaningless, so the UI falls back to a plain "no comparison yet".
+  final double? revenueChangePercent;
+  final String suggestion;
+
+  const MonthlySummary({
+    required this.month,
+    required this.totalRevenue,
+    required this.totalOrders,
+    required this.totalItemsSold,
+    required this.bestDay,
+    required this.bestDayRevenue,
+    required this.bestSellingItemName,
+    required this.bestSellingItemQty,
+    required this.revenueChangePercent,
+    required this.suggestion,
+  });
+}
+
+final monthlySummaryProvider = Provider<MonthlySummary?>((ref) {
+  final isAdmin = ref.watch(isAdminProvider);
+  if (!isAdmin) return null;
+
+  final delivered = ref.watch(_deliveredOrdersProvider);
+  final now = DateTime.now();
+  final monthStart = DateTime(now.year, now.month);
+  final prevMonthStart = DateTime(now.year, now.month - 1); // DateTime normalizes month 0 → Dec of prior year
+
+  final currentMonthOrders = delivered
+      .where((o) => o.placedAt.year == monthStart.year && o.placedAt.month == monthStart.month)
+      .toList();
+  final prevMonthOrders = delivered
+      .where((o) => o.placedAt.year == prevMonthStart.year && o.placedAt.month == prevMonthStart.month)
+      .toList();
+
+  final totalRevenue = currentMonthOrders.fold<int>(0, (s, o) => s + o.total);
+  final totalOrders = currentMonthOrders.length;
+  final totalItemsSold = currentMonthOrders.fold<int>(
+    0,
+    (s, o) => s + o.items.fold<int>(0, (s2, i) => s2 + i.quantity),
+  );
+  final prevRevenue = prevMonthOrders.fold<int>(0, (s, o) => s + o.total);
+
+  final revenueByDay = <DateTime, int>{};
+  for (final o in currentMonthOrders) {
+    final d = DateTime(o.placedAt.year, o.placedAt.month, o.placedAt.day);
+    revenueByDay[d] = (revenueByDay[d] ?? 0) + o.total;
+  }
+  DateTime? bestDay;
+  int bestDayRevenue = 0;
+  revenueByDay.forEach((d, rev) {
+    if (rev > bestDayRevenue) {
+      bestDayRevenue = rev;
+      bestDay = d;
+    }
+  });
+
+  final qtyByListing = <String, int>{};
+  final nameByListing = <String, String>{};
+  for (final o in currentMonthOrders) {
+    for (final item in o.items) {
+      qtyByListing[item.listingId] = (qtyByListing[item.listingId] ?? 0) + item.quantity;
+      nameByListing.putIfAbsent(item.listingId, () => item.name);
+    }
+  }
+  String? bestItemName;
+  int bestItemQty = 0;
+  qtyByListing.forEach((id, qty) {
+    if (qty > bestItemQty) {
+      bestItemQty = qty;
+      bestItemName = nameByListing[id];
+    }
+  });
+
+  final changePercent = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : null;
+
+  int weekdayRevenue = 0, weekdayDays = 0, weekendRevenue = 0, weekendDays = 0;
+  revenueByDay.forEach((d, rev) {
+    final isWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+    if (isWeekend) {
+      weekendRevenue += rev;
+      weekendDays++;
+    } else {
+      weekdayRevenue += rev;
+      weekdayDays++;
+    }
+  });
+  final avgWeekday = weekdayDays > 0 ? weekdayRevenue / weekdayDays : 0;
+  final avgWeekend = weekendDays > 0 ? weekendRevenue / weekendDays : 0;
+
+  final String suggestion;
+  if (totalOrders == 0) {
+    suggestion = 'No sales recorded yet this month — a promotion could help kick things off.';
+  } else if (changePercent != null && changePercent <= -10) {
+    suggestion = 'Revenue is down ${changePercent.abs().round()}% vs last month — a limited-time '
+        'discount could help recover momentum.';
+  } else if (changePercent != null && changePercent >= 10) {
+    suggestion = 'Revenue is up ${changePercent.round()}% vs last month — whatever you\'re doing, '
+        'it\'s working.';
+  } else if (weekdayDays > 0 && weekendDays > 0 && avgWeekend > avgWeekday * 1.2) {
+    suggestion = 'Weekends are outperforming weekdays — a weekday discount could even out sales '
+        'across the week.';
+  } else if (weekdayDays > 0 && weekendDays > 0 && avgWeekday > avgWeekend * 1.2) {
+    suggestion = 'Weekdays are outperforming weekends — a weekend promo could capture more '
+        'casual browsers.';
+  } else {
+    suggestion = 'Sales look steady across the month so far — no strong pattern to flag yet.';
+  }
+
+  return MonthlySummary(
+    month: monthStart,
+    totalRevenue: totalRevenue,
+    totalOrders: totalOrders,
+    totalItemsSold: totalItemsSold,
+    bestDay: bestDay,
+    bestDayRevenue: bestDayRevenue,
+    bestSellingItemName: bestItemName,
+    bestSellingItemQty: bestItemQty,
+    revenueChangePercent: changePercent,
+    suggestion: suggestion,
+  );
+});

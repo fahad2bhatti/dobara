@@ -30,6 +30,8 @@ class _SellForm {
   String color = '';
   String price = '';
   String description = '';
+  bool hasDiscount = false;
+  String discountPercent = '';
 }
 
 /// Guided, multi-step sell flow — matches Doc 5 spec:
@@ -54,6 +56,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   final _sizeController = TextEditingController();
   final _colorController = TextEditingController();
   final _priceController = TextEditingController();
+  final _discountController = TextEditingController();
   final _descController = TextEditingController();
 
   @override
@@ -62,6 +65,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     _sizeController.dispose();
     _colorController.dispose();
     _priceController.dispose();
+    _discountController.dispose();
     _descController.dispose();
     super.dispose();
   }
@@ -71,7 +75,12 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     if (_step == 3) return _form.condition != null;
     if (_step == 5) {
       final p = int.tryParse(_form.price);
-      return p != null && p > 0;
+      if (p == null || p <= 0) return false;
+      if (_form.hasDiscount) {
+        final d = int.tryParse(_form.discountPercent);
+        if (d == null || d <= 0 || d >= 100) return false;
+      }
+      return true;
     }
     return true;
   }
@@ -122,6 +131,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         description: _form.description,
         seller: seller,
         images: _pickedImages,
+        discountPercent: _form.hasDiscount ? int.tryParse(_form.discountPercent) : null,
       );
       if (mounted) {
         setState(() {
@@ -656,6 +666,79 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         ),
         const SizedBox(height: 16),
         Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Offer a discount?',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    value: _form.hasDiscount,
+                    onChanged: (v) => setState(() {
+                      _form.hasDiscount = v;
+                      if (!v) {
+                        _form.discountPercent = '';
+                        _discountController.clear();
+                      }
+                    }),
+                  ),
+                ],
+              ),
+              if (_form.hasDiscount) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _discountController,
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => setState(() => _form.discountPercent = v),
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. 20',
+                          suffixText: '% off',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (int.tryParse(_form.price) != null &&
+                    int.tryParse(_form.discountPercent) != null &&
+                    int.tryParse(_form.discountPercent)! > 0 &&
+                    int.tryParse(_form.discountPercent)! < 100)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Buyers will see: Rs. ${_formatPrice(int.tryParse(_form.price)!)} '
+                      '→ Rs. ${_formatPrice((int.tryParse(_form.price)! * (100 - int.tryParse(_form.discountPercent)!) / 100).round())}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
@@ -886,7 +969,15 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                   _form.price.isEmpty
                       ? '—'
                       : 'Rs. ${_formatPrice(int.tryParse(_form.price) ?? 0)}',
-                  last: true),
+                  last: !_form.hasDiscount),
+              if (_form.hasDiscount)
+                _summaryRow(
+                  'Discount',
+                  _form.discountPercent.isEmpty
+                      ? '—'
+                      : '${_form.discountPercent}% off',
+                  last: true,
+                ),
             ],
           ),
         ),

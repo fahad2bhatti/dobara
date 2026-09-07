@@ -29,10 +29,12 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   late final TextEditingController _brandController;
   late final TextEditingController _sizeController;
   late final TextEditingController _priceController;
+  late final TextEditingController _discountController;
   late final TextEditingController _descController;
   late String _category;
   late ConditionGrade _condition;
   late bool _soldOut;
+  late bool _hasDiscount;
   bool _saving = false;
 
   // Images: existing (already-uploaded) URLs the admin can remove,
@@ -48,6 +50,10 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     _brandController = TextEditingController(text: p.brand);
     _sizeController = TextEditingController(text: p.size ?? '');
     _priceController = TextEditingController(text: p.price.toString());
+    _hasDiscount = p.hasDiscount;
+    _discountController = TextEditingController(
+      text: p.discountPercent?.toString() ?? '',
+    );
     _descController = TextEditingController(text: p.description);
     _category = _kCategories.contains(p.category) ? p.category : _kCategories.first;
     _condition = p.condition;
@@ -76,6 +82,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     _brandController.dispose();
     _sizeController.dispose();
     _priceController.dispose();
+    _discountController.dispose();
     _descController.dispose();
     super.dispose();
   }
@@ -87,6 +94,16 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         const SnackBar(content: Text('Please enter a valid name and price.')),
       );
       return;
+    }
+    int? discountPercent;
+    if (_hasDiscount) {
+      discountPercent = int.tryParse(_discountController.text.trim());
+      if (discountPercent == null || discountPercent <= 0 || discountPercent >= 100) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a discount between 1 and 99%.')),
+        );
+        return;
+      }
     }
     if (_totalImageCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,6 +134,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
               ? null
               : _sizeController.text.trim(),
           'price': price,
+          'discountPercent': discountPercent,
           'category': _category,
           'condition': _condition.label,
           'description': _descController.text.trim(),
@@ -433,6 +451,55 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                         ),
                       ),
                     ),
+                  ],
+                ),
+              )),
+              const SizedBox(height: 14),
+
+              _labeled('DISCOUNT', Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border, width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Offer a discount?',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        Switch(
+                          value: _hasDiscount,
+                          onChanged: (v) => setState(() {
+                            _hasDiscount = v;
+                            if (!v) _discountController.clear();
+                          }),
+                        ),
+                      ],
+                    ),
+                    if (_hasDiscount) ...[
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: _discountController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. 20',
+                          suffixText: '% off',
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               )),

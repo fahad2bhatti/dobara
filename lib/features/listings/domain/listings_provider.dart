@@ -41,6 +41,7 @@ class ListingsRepository {
     // Remove this + the `images.isNotEmpty` branch below once Storage
     // is back — real picked photos will then upload normally again.
     String? placeholderImageUrl,
+    int? discountPercent,
   }) async {
     // Reserve a doc id up front so uploaded images can be filed under it.
     final docRef = _listingsCollection.doc();
@@ -68,6 +69,7 @@ class ListingsRepository {
       city: city,
       description: description,
       seller: seller,
+      discountPercent: (discountPercent != null && discountPercent > 0) ? discountPercent : null,
     );
 
     await docRef.set(product.toMap());

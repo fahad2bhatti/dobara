@@ -37,7 +37,7 @@ class CartActions extends Notifier<void> {
     final item = CartItem(
       listingId: product.id,
       name: product.name,
-      price: product.price,
+      price: product.effectivePrice,
       imageUrl: product.imageUrl,
       size: product.size,
       sellerId: product.seller.id,

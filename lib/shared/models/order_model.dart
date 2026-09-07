@@ -60,12 +60,14 @@ class OrderItem {
 
   /// Buy Now path — builds an order item straight from a Product,
   /// bypassing the cart entirely (nothing is written to
-  /// cart/{uid}/items for a Buy Now purchase).
+  /// cart/{uid}/items for a Buy Now purchase). Uses effectivePrice
+  /// (post-discount) so Buy Now charges the same amount as Add to
+  /// Cart → Checkout would for the same listing.
   factory OrderItem.fromProduct(Product product, {int quantity = 1}) =>
       OrderItem(
         listingId: product.id,
         name: product.name,
-        price: product.price,
+        price: product.effectivePrice,
         imageUrl: product.imageUrl,
         sellerId: product.seller.id,
         sellerName: product.seller.name,

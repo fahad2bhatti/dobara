@@ -37,7 +37,7 @@ class MyReviewsScreen extends ConsumerWidget {
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               itemCount: reviews.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, i) {
                 final r = reviews[i];
                 return Container(
@@ -95,7 +95,7 @@ class MyReviewsScreen extends ConsumerWidget {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: r.photoUrls.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(width: 6),
                             itemBuilder: (context, j) => ClipRRect(
                               borderRadius: BorderRadius.circular(8),

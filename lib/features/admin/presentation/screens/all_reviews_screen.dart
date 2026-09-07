@@ -34,7 +34,7 @@ class AllReviewsScreen extends ConsumerWidget {
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               itemCount: reviews.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (context, i) => _ReviewCard(review: reviews[i]),
             );
           },
@@ -123,7 +123,7 @@ class _ReviewCard extends ConsumerWidget {
                     width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5)),
               ),
             ),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
             data: (product) {
               if (product == null) {
                 return const Text('On: (listing removed)',
@@ -186,7 +186,7 @@ class _ReviewCard extends ConsumerWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: review.photoUrls.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
                 itemBuilder: (context, j) => ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(

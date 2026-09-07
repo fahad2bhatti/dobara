@@ -70,6 +70,11 @@ class Product {
   final DateTime? createdAt;
   final bool isSoldOut;
   final int viewCount;
+  /// 1-99 when the listing is discounted, null otherwise. `price`
+  /// always stays the original/actual price — the discounted price is
+  /// derived, never stored separately, so it can never drift out of
+  /// sync with price/percent edits.
+  final int? discountPercent;
 
   const Product({
     required this.id,
@@ -86,7 +91,19 @@ class Product {
     this.createdAt,
     this.isSoldOut = false,
     this.viewCount = 0,
+    this.discountPercent,
   });
+
+  bool get hasDiscount => discountPercent != null && discountPercent! > 0;
+
+  /// Price after the discount is applied — equals `price` when there's
+  /// no discount.
+  int get discountedPrice =>
+      hasDiscount ? (price - (price * discountPercent! / 100)).round() : price;
+
+  /// The price a buyer actually pays right now — use this (not `price`)
+  /// anywhere a real transaction amount is needed (cart, checkout).
+  int get effectivePrice => discountedPrice;
 
   /// Convenience — first image, or a blank placeholder if none uploaded.
   String get imageUrl =>
@@ -107,6 +124,7 @@ class Product {
     'createdAt': FieldValue.serverTimestamp(),
     'isSoldOut': isSoldOut,
     'viewCount': viewCount,
+    'discountPercent': discountPercent,
   };
 
   factory Product.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -127,6 +145,7 @@ class Product {
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
       isSoldOut: map['isSoldOut'] ?? false,
       viewCount: (map['viewCount'] as num?)?.toInt() ?? 0,
+      discountPercent: (map['discountPercent'] as num?)?.toInt(),
     );
   }
 }

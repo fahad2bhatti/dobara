@@ -259,14 +259,53 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                                   ),
                                 ),
                               ),
-                              Text(
-                                'Rs. ${_formatPrice(p.price)}',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
+                              if (p.hasDiscount)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.accent,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '-${p.discountPercent}%',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Rs. ${_formatPrice(p.discountedPrice)}',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Rs. ${_formatPrice(p.price)}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.textTertiary,
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Text(
+                                  'Rs. ${_formatPrice(p.price)}',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                           if (p.viewCount > 0) ...[
