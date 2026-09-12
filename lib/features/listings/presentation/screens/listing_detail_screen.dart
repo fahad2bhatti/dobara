@@ -580,7 +580,10 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                           duration: const Duration(seconds: 2),
                           action: SnackBarAction(
                             label: 'View Cart',
-                            onPressed: () => context.push('/cart'),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              context.push('/cart');
+                            },
                           ),
                         ),
                       );

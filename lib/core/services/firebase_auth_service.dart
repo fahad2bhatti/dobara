@@ -35,6 +35,9 @@ class FirebaseAuthService {
         'completedSales': 0,
         'avatarUrl': '',
         'city': 'Lahore',
+        'isBanned': false,
+        'notifyOrderUpdates': true,
+        'notifyPromotions': true,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }

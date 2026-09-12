@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/notification_model.dart';
 import '../../../../shared/models/order_model.dart';
+import '../../../../shared/models/product_model.dart';
 import '../../../auth/domain/auth_provider.dart';
+import '../../../listings/domain/listings_provider.dart';
 import '../../../orders/domain/orders_provider.dart';
 import '../../data/notifications_providers.dart';
 
@@ -94,6 +97,25 @@ class _NotificationTile extends ConsumerWidget {
           }
           if (order != null && context.mounted) {
             context.push('/order-history/detail', extra: order);
+          }
+        } else if (n.listingId != null) {
+          final listings = ref.read(listingsStreamProvider).asData?.value ?? [];
+          Product? product;
+          for (final p in listings) {
+            if (p.id == n.listingId) {
+              product = p;
+              break;
+            }
+          }
+          if (product == null) {
+            final doc = await FirebaseFirestore.instance
+                .collection('listings')
+                .doc(n.listingId)
+                .get();
+            if (doc.exists) product = Product.fromDoc(doc);
+          }
+          if (product != null && context.mounted) {
+            context.push('/listing-detail', extra: product);
           }
         }
       },

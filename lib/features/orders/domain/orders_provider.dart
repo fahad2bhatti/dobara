@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/order_model.dart';
 import '../../../shared/models/notification_model.dart';
+import '../../../shared/models/user_profile_model.dart';
 import '../../auth/domain/auth_provider.dart';
 import '../../notifications/data/notifications_providers.dart';
 import '../data/orders_repository.dart';
@@ -112,6 +114,15 @@ class OrdersActions extends Notifier<void> {
     } else if (tracking != null) {
       body += ' Tracking: $tracking.';
     }
+
+    // Respect the buyer's own "Order Updates" preference — the toggle
+    // in Notification Settings did nothing before this, since nothing
+    // ever checked it.
+    final buyerDoc =
+    await FirebaseFirestore.instance.collection('users').doc(order.buyerId).get();
+    final buyerWantsUpdates =
+        buyerDoc.exists ? UserProfile.fromDoc(buyerDoc).notifyOrderUpdates : true;
+    if (!buyerWantsUpdates) return;
 
     await ref.read(notificationsRepositoryProvider).notify(
       order.buyerId,

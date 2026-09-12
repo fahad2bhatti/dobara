@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/models/order_model.dart';
+import '../../../orders/domain/orders_provider.dart';
+import '../../../listings/domain/listings_provider.dart';
 import '../../domain/analytics_provider.dart';
 
 /// Admin-only Analytics screen, built out phase by phase:
@@ -15,6 +17,54 @@ class AdminAnalyticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Every stat on this screen derives from these two root streams, so
+    // gate the whole screen on them rather than letting each derived
+    // provider silently default to zero while data is still arriving
+    // or a stream has failed.
+    final ordersAsync = ref.watch(adminOrdersStreamProvider);
+    final listingsAsync = ref.watch(listingsStreamProvider);
+
+    if (ordersAsync.isLoading || listingsAsync.isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(title: const Text('Analytics')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (ordersAsync.hasError || listingsAsync.hasError) {
+      final err = ordersAsync.error ?? listingsAsync.error;
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(title: const Text('Analytics')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 32, color: AppColors.errorText),
+                const SizedBox(height: 10),
+                Text(
+                  'Could not load analytics: $err',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    ref.invalidate(adminOrdersStreamProvider);
+                    ref.invalidate(listingsStreamProvider);
+                  },
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final revenue = ref.watch(totalRevenueProvider);
     final itemsSold = ref.watch(totalItemsSoldProvider);
     final salesCount = ref.watch(totalSalesCountProvider);
@@ -26,169 +76,184 @@ class AdminAnalyticsScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Analytics')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _SectionLabel('Overview'),
-              const SizedBox(height: 10),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.5,
-                children: [
-                  _StatCard(
-                    label: 'Total Revenue',
-                    value: 'Rs ${_formatMoney(revenue)}',
-                    icon: Icons.payments_outlined,
-                    color: AppColors.primary,
-                  ),
-                  _StatCard(
-                    label: 'Items Sold',
-                    value: '$itemsSold',
-                    icon: Icons.inventory_2_outlined,
-                    color: AppColors.accent,
-                  ),
-                  _StatCard(
-                    label: 'Total Sales',
-                    value: '$salesCount',
-                    icon: Icons.check_circle_outline,
-                    color: AppColors.successText,
-                  ),
-                  _StatCard(
-                    label: 'Avg Order Value',
-                    value: 'Rs ${_formatMoney(avgOrderValue)}',
-                    icon: Icons.trending_up,
-                    color: const Color(0xFF0B3A6E),
-                  ),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(adminOrdersStreamProvider);
+            ref.invalidate(listingsStreamProvider);
+            await Future.wait([
+              ref.read(adminOrdersStreamProvider.future),
+              ref.read(listingsStreamProvider.future),
+            ]);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (ordersCount == 0) ...[
+                  const _NoDataBanner(),
+                  const SizedBox(height: 16),
                 ],
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Text(
-                  '$ordersCount total orders placed (including pending & cancelled)',
-                  style: const TextStyle(
+                const _SectionLabel('Overview'),
+                const SizedBox(height: 10),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _StatCard(
+                      label: 'Total Revenue',
+                      value: 'Rs ${_formatMoney(revenue)}',
+                      icon: Icons.payments_outlined,
+                      color: AppColors.primary,
+                    ),
+                    _StatCard(
+                      label: 'Items Sold',
+                      value: '$itemsSold',
+                      icon: Icons.inventory_2_outlined,
+                      color: AppColors.accent,
+                    ),
+                    _StatCard(
+                      label: 'Total Sales',
+                      value: '$salesCount',
+                      icon: Icons.check_circle_outline,
+                      color: AppColors.successText,
+                    ),
+                    _StatCard(
+                      label: 'Avg Order Value',
+                      value: 'Rs ${_formatMoney(avgOrderValue)}',
+                      icon: Icons.trending_up,
+                      color: const Color(0xFF0B3A6E),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Text(
+                    '$ordersCount total orders placed (including pending & cancelled)',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('Order Status Breakdown'),
+                const SizedBox(height: 10),
+                _StatusBreakdownCard(
+                  breakdown: statusBreakdown,
+                  total: ordersCount,
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('Daily Sales'),
+                const SizedBox(height: 10),
+                _DailySalesChart(points: ref.watch(dailySalesHistoryProvider)),
+                const SizedBox(height: 24),
+                const _SectionLabel('Monthly Sales — Last 6 Months'),
+                const SizedBox(height: 10),
+                _MonthlySalesChart(points: ref.watch(monthlySalesProvider)),
+                const SizedBox(height: 24),
+                const _SectionLabel('Top-Selling Listings'),
+                const SizedBox(height: 10),
+                _TopListCard(
+                  emptyText: 'No sales yet.',
+                  items: [
+                    for (final s in ref.watch(topSellingListingsProvider))
+                      _TopListItem(
+                        title: s.name,
+                        value: '${s.quantitySold} sold',
+                        subtitle: 'Rs ${_formatMoney(s.revenue)}',
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('Top Categories'),
+                const SizedBox(height: 10),
+                _TopListCard(
+                  emptyText: 'No sales yet.',
+                  items: [
+                    for (final s in ref.watch(topSellingCategoriesProvider))
+                      _TopListItem(
+                        title: s.category,
+                        value: '${s.quantitySold} sold',
+                        subtitle: 'Rs ${_formatMoney(s.revenue)}',
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('Most Viewed Listings'),
+                const SizedBox(height: 10),
+                _TopListCard(
+                  emptyText: 'No views yet.',
+                  items: [
+                    for (final p in ref.watch(mostViewedListingsProvider).take(topPerformersLimit))
+                      _TopListItem(
+                        title: p.name,
+                        value: '${p.viewCount} view${p.viewCount == 1 ? '' : 's'}',
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('Customer Insights'),
+                const SizedBox(height: 10),
+                Builder(builder: (context) {
+                  final insights = ref.watch(customerInsightsProvider);
+                  return SizedBox(
+                    height: 100,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            label: 'New Customers',
+                            value: '${insights.newCustomers}',
+                            icon: Icons.person_add_alt_outlined,
+                            color: AppColors.successText,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _StatCard(
+                            label: 'Returning Customers',
+                            value: '${insights.returningCustomers}',
+                            icon: Icons.repeat_outlined,
+                            color: const Color(0xFF0B3A6E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 16),
+                const Text(
+                  'City-wise Orders',
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.textTertiary,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              const _SectionLabel('Order Status Breakdown'),
-              const SizedBox(height: 10),
-              _StatusBreakdownCard(
-                breakdown: statusBreakdown,
-                total: ordersCount,
-              ),
-              const SizedBox(height: 24),
-              const _SectionLabel('Daily Sales'),
-              const SizedBox(height: 10),
-              _DailySalesChart(points: ref.watch(dailySalesHistoryProvider)),
-              const SizedBox(height: 24),
-              const _SectionLabel('Monthly Sales — Last 6 Months'),
-              const SizedBox(height: 10),
-              _MonthlySalesChart(points: ref.watch(monthlySalesProvider)),
-              const SizedBox(height: 24),
-              const _SectionLabel('Top-Selling Listings'),
-              const SizedBox(height: 10),
-              _TopListCard(
-                emptyText: 'No sales yet.',
-                items: [
-                  for (final s in ref.watch(topSellingListingsProvider))
-                    _TopListItem(
-                      title: s.name,
-                      value: '${s.quantitySold} sold',
-                      subtitle: 'Rs ${_formatMoney(s.revenue)}',
-                    ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _SectionLabel('Top Categories'),
-              const SizedBox(height: 10),
-              _TopListCard(
-                emptyText: 'No sales yet.',
-                items: [
-                  for (final s in ref.watch(topSellingCategoriesProvider))
-                    _TopListItem(
-                      title: s.category,
-                      value: '${s.quantitySold} sold',
-                      subtitle: 'Rs ${_formatMoney(s.revenue)}',
-                    ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _SectionLabel('Most Viewed Listings'),
-              const SizedBox(height: 10),
-              _TopListCard(
-                emptyText: 'No views yet.',
-                items: [
-                  for (final p in ref.watch(mostViewedListingsProvider).take(topPerformersLimit))
-                    _TopListItem(
-                      title: p.name,
-                      value: '${p.viewCount} view${p.viewCount == 1 ? '' : 's'}',
-                    ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _SectionLabel('Customer Insights'),
-              const SizedBox(height: 10),
-              Builder(builder: (context) {
-                final insights = ref.watch(customerInsightsProvider);
-                return SizedBox(
-                  height: 100,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: 'New Customers',
-                          value: '${insights.newCustomers}',
-                          icon: Icons.person_add_alt_outlined,
-                          color: AppColors.successText,
-                        ),
+                const SizedBox(height: 8),
+                _TopListCard(
+                  emptyText: 'No delivered orders yet.',
+                  items: [
+                    for (final c in ref.watch(cityDistributionProvider))
+                      _TopListItem(
+                        title: c.city,
+                        value: '${c.orderCount} order${c.orderCount == 1 ? '' : 's'}',
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _StatCard(
-                          label: 'Returning Customers',
-                          value: '${insights.returningCustomers}',
-                          icon: Icons.repeat_outlined,
-                          color: const Color(0xFF0B3A6E),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 16),
-              const Text(
-                'City-wise Orders',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              _TopListCard(
-                emptyText: 'No delivered orders yet.',
-                items: [
-                  for (final c in ref.watch(cityDistributionProvider))
-                    _TopListItem(
-                      title: c.city,
-                      value: '${c.orderCount} order${c.orderCount == 1 ? '' : 's'}',
-                    ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _SectionLabel('Monthly Summary'),
-              const SizedBox(height: 10),
-              _MonthlySummaryCard(summary: ref.watch(monthlySummaryProvider)),
-            ],
+                const SizedBox(height: 24),
+                const _SectionLabel('Monthly Summary'),
+                const SizedBox(height: 10),
+                _MonthlySummaryCard(summary: ref.watch(monthlySummaryProvider)),
+              ],
+            ),
           ),
         ),
       ),
@@ -209,6 +274,36 @@ class _SectionLabel extends StatelessWidget {
         fontWeight: FontWeight.w700,
         letterSpacing: 1.4,
         color: AppColors.textTertiary,
+      ),
+    );
+  }
+}
+
+/// Shown at the top of the screen when there are no orders yet — every
+/// figure below would otherwise just read zero with no explanation.
+class _NoDataBanner extends StatelessWidget {
+  const _NoDataBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warningBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warningBorder),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: AppColors.warningText),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'No orders yet — these figures will fill in once orders start coming in.',
+              style: TextStyle(fontSize: 12, color: AppColors.warningText),
+            ),
+          ),
+        ],
       ),
     );
   }

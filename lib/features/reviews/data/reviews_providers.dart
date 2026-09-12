@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/models/notification_model.dart';
 import '../../../shared/models/review_model.dart';
 import '../../auth/domain/auth_provider.dart';
+import '../../notifications/data/notifications_providers.dart';
 import 'reviews_repository.dart';
 
 final reviewsRepositoryProvider =
@@ -83,6 +86,22 @@ class ReviewsActions extends Notifier<void> {
     await ref
         .read(reviewsRepositoryProvider)
         .submitAdminReply(listingId, reviewId, reply);
+
+    // reviewId == the reviewer's own uid (doc id convention), so this
+    // is exactly who to notify — no extra lookup needed.
+    final listingDoc =
+    await FirebaseFirestore.instance.collection('listings').doc(listingId).get();
+    final listingName = listingDoc.data()?['name'] as String? ?? 'your listing';
+    await ref.read(notificationsRepositoryProvider).notify(
+      reviewId,
+      AppNotification(
+        id: '',
+        title: 'Seller replied to your review',
+        body: 'The seller replied to your review on "$listingName".',
+        listingId: listingId,
+        createdAt: DateTime.now(),
+      ),
+    );
   }
 }
 

@@ -28,10 +28,13 @@ service cloud.firestore {
       // those fields must stay unchanged unless an admin is writing.
       // Without this, any signed-in user could set role:'admin' on
       // their own doc and self-promote, or clear isBanned to un-ban
-      // themselves.
+      // themselves. Uses .get() with a default because some existing
+      // accounts predate the isBanned field being written at signup —
+      // a direct .isBanned access errors (and denies the whole write)
+      // when the key is simply missing rather than false.
       allow update: if (isOwner(userId) &&
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.isBanned == resource.data.isBanned) ||
+          request.resource.data.get('role', null) == resource.data.get('role', null) &&
+          request.resource.data.get('isBanned', false) == resource.data.get('isBanned', false)) ||
         isAdmin();
       allow delete: if isOwner(userId) || isAdmin();
     }

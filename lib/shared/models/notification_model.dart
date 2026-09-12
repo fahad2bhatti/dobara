@@ -1,17 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// In-app notification — currently used for order status updates.
-/// Stored per-user at notifications/{uid}/items/{id}. This is an
-/// in-app feed, not a push notification: real push (FCM) needs a
-/// server-side trigger (Cloud Functions), which requires the Blaze
-/// plan that hit a billing error earlier on this project. This gives
-/// the buyer a real, reliable "you have an update" signal without
-/// depending on that.
+/// In-app notification — currently used for order status updates and
+/// admin review replies. Stored per-user at notifications/{uid}/items/{id}.
+/// This is an in-app feed, not a push notification: real push (FCM)
+/// needs a server-side trigger (Cloud Functions), which requires the
+/// Blaze plan that hit a billing error earlier on this project. This
+/// gives the buyer a real, reliable "you have an update" signal
+/// without depending on that.
 class AppNotification {
   final String id;
   final String title;
   final String body;
   final String? orderId;
+  final String? listingId;
   final DateTime createdAt;
   final bool read;
 
@@ -20,6 +21,7 @@ class AppNotification {
     required this.title,
     required this.body,
     this.orderId,
+    this.listingId,
     required this.createdAt,
     this.read = false,
   });
@@ -28,6 +30,7 @@ class AppNotification {
     'title': title,
     'body': body,
     'orderId': orderId,
+    'listingId': listingId,
     'createdAt': FieldValue.serverTimestamp(),
     'read': read,
   };
@@ -39,6 +42,7 @@ class AppNotification {
       title: map['title'] ?? '',
       body: map['body'] ?? '',
       orderId: map['orderId'] as String?,
+      listingId: map['listingId'] as String?,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       read: map['read'] ?? false,
     );
